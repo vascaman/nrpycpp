@@ -1,0 +1,44 @@
+
+# Custom '.pri' files
+config.pri
+depspath.pri
+qac.version
+
+# merge tmp files
+*.orig
+
+# IDEs user's config files
+*.pro.user*
+.idea/
+
+# Generated Makefiles
+Makefile*
+
+# Objects and archives
+*.[oa]
+*.so
+*.so.*
+# python pre-compiled files
+*.pyc
+# merge files
+*.orig
+
+# Log files
+*.log
+
+# qt generated moc files
+moc_*
+
+# docker agent build tmp files
+agent/docker/ub1604/create.conf
+agent/docker/ub1604/iqac-agent-package.tar.gz
+
+
+# folders
+debug/
+release/
+
+# qt shadow build folders
+build-*/
+
+
