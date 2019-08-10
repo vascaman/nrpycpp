@@ -35,9 +35,9 @@ agent/docker/ub1604/iqac-agent-package.tar.gz
 
 
 # folders
-license_server/tools/license_check/bin/
-license_server/tools/license_gen/bin/
-agent/testbed_agents/
+debug/
+release/
+
 # qt shadow build folders
 build-*/
 

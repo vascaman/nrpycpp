@@ -21,7 +21,12 @@ int main(int argc, char *argv[])
 
     for (int i=0; i<3;i++)
     {
-        PyRunner * w = PyEnvironment::getInstance().getInstanceModule("/home/aru/Projects/PyQAC/PyQAC.py");
+        PyRunner * w = PyEnvironment::getInstance().getInstanceModule("/home/sergio/develop/libs/pyqac/samples/pyTestSample/PyTestSample.py");
+
+        w->syncCallFunction("init", QStringList());
+        QString res = w->getResult("result_0");
+        qDebug() << "result:" << res;
+#if (0)
         w->syncCallFunction("init", QStringList());
         w->setParam("param_0", "192.168.23.242");
         w->start();
@@ -29,6 +34,7 @@ int main(int argc, char *argv[])
         w->stop();
         w->syncCallFunction("deinit", QStringList());
         qDebug()<<"test result:"<<w->getResult("result_0");
+#endif
         w->deleteLater();
     }
     qDebug()<<"finished";
