@@ -1,16 +1,19 @@
 #ifndef PYRUNNER_H
 #define PYRUNNER_H
+
 #include <QObject>
 #include <QString>
 #include <QThread>
 #include <QMutex>
 #include <QUuid>
 #include <QMap>
-#include "Python.h"
 #include <QDebug>
 #include <QFile>
 #include <QDir>
 #include <QTimer>
+#include <QMetaType>
+
+#include "Python.h"
 
 struct PyQACCall
 {
@@ -97,3 +100,4 @@ private slots:
 };
 
 #endif // PYRUNNER_H
+
