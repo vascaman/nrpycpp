@@ -1,7 +1,6 @@
 import threading
 import time
 import subprocess
-import logging
 
 class TestParamName:
     src_agent_id = "src_agent_id"
@@ -89,7 +88,6 @@ class ModuleContext:
         self.testThread = PyQAC(self.threadId, self.threadName)
         self.agentInfo = AgentInfo()
         self.testParams = TestParams()
-        self.logger = logging.basicConfig(filename=self.threadName + ".log", level=logging.DEBUG)
 
     def setAgentInfo(self, i_agentInfo):
         self.agentInfo = i_agentInfo
@@ -101,12 +99,12 @@ g_moduleContext = ''
 def init():
     global g_moduleContext
     g_moduleContext = ModuleContext()
-    g_moduleContext.logger.info("PY MODULE init()")
+    print 'PY MODULE init()'
 
 
 def setParam(paramName, paramValue):
     global g_moduleContext
-    g_moduleContext.logger.info("PY MODULE setParam() %(name)s -> %(value)s" % { "name":paramName, "value":paramValue })
+    print("PY MODULE setParam() %(name)s -> %(value)s" % { "name":paramName, "value":paramValue })
     if(paramName==TestParamName.src_agent_id and len(paramValue)>0):
         g_moduleContext.agentInfo.src_agent_id = paramValue
     if (paramName == TestParamName.dst_agent_id and len(paramValue) > 0):
@@ -130,27 +128,27 @@ def setParam(paramName, paramValue):
 
 def start():
     global g_moduleContext
-    g_moduleContext.logger.info("PY MODULE start()")
+    print("PY MODULE start()")
     g_moduleContext.testThread.start()
 
 
 def stop():
     global g_moduleContext
-    g_moduleContext.logger.info("PY MODULE stop()")
+    print("PY MODULE stop()")
     g_moduleContext.testThread.stop()
 
 
 def getResult(resultName):
     global g_moduleContext
     result = g_moduleContext.testThread.getResult(resultName)
-    g_moduleContext.logger.info("PY MODULE getResult() %(name)s --> %(value)s" %
+    print("PY MODULE getResult() %(name)s --> %(value)s" %
                                 {'name':resultName, 'value':result} )
     return result
 
 
 def deinit():
     global g_moduleContext
-    g_moduleContext.logger.info("PY MODULE deinit()")
+    print("PY MODULE deinit()")
     g_moduleContext.testThread.join()
     g_moduleContext.testThread.terminate()
     
