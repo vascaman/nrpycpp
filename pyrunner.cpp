@@ -12,9 +12,10 @@ PyRunner::~PyRunner()
     tearDown();
 }
 
-PyRunner::PyRunner(QString scriptPath)
+PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
 {
     m_sourceFilePy = scriptPath;
+    m_dependecies = dependecies;
     m_module_dict = NULL;
     qRegisterMetaType<PyQACCall>("PyQACCall");
 
@@ -53,6 +54,7 @@ void PyRunner::setup()
         m_scriptFilePath = scriptFileInfo.dir().path();
 
         //Py_Initialize();
+
     }catch(...)
     {
         PyErr_Print();
@@ -287,7 +289,6 @@ PyObject * PyRunner::getModuleDict()
         Py_DecRef(m_py_lib_mod);
 
         Py_DecRef(scriptName);
-
     }
 
     return  m_module_dict;
@@ -344,8 +345,17 @@ void PyRunner::loadCurrentModule()
     PyObject* sys = PyImport_ImportModule( "sys" );//new reference
     PyObject* sys_path = PyObject_GetAttrString( sys, "path" );//new reference
     PyObject* folder_path = PyString_FromString( m_scriptFilePath.toUtf8().data() );//new reference
+
     //add script path to python search path
     PyList_Append( sys_path, folder_path );
+
+    //add dependecies path to python search path
+    foreach (QString dependecy, m_dependecies)
+    {
+        PyObject* dependency_path = PyString_FromString(dependecy.toUtf8().data());//new reference
+        PyList_Append( sys_path, dependency_path);
+        Py_DecRef(dependency_path);
+    }
 
     Py_DecRef(sys);
     Py_DecRef(sys_path);
@@ -357,8 +367,17 @@ void PyRunner::unloadCurrentModule()
     PyGILState_STATE gstate = PyGILState_Ensure();
     //PyEval_InitThreads();
 
+    //unload imported paths
     QString unloadCommand = "del sys.modules[\""+m_scriptFileName+"\"]";
     PyRun_SimpleString(unloadCommand.toUtf8().data());
+
+    foreach (QString dependency, m_dependecies)
+    {
+        unloadCommand = "del sys.modules[\""+dependency+"\"]";
+        PyRun_SimpleString(unloadCommand.toUtf8().data());
+    }
+
+
 
     PyGILState_Release(gstate);
     PyEval_ReleaseLock();

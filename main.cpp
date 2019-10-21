@@ -11,6 +11,13 @@ int main(int argc, char *argv[])
 
     PyEnvironment::getInstance().start();
 
+    QString pythonFilePath = "/home/aru/Projects/ScrapyFiles/ScrapyInstaller.py";
+
+    QStringList dependencies;
+//    dependencies.append("/home/aru/Projects/PyQAC/Dependency/");
+//    dependencies.append("/home/aru/Projects/PyQAC/Dependency2/");
+    //dependencies.append("/home/aru/Projects/PyQAC/PyDependencyImporter/");
+
     QStringList params;
     params.append("param_1");
     params.append("param_2");
@@ -19,14 +26,9 @@ int main(int argc, char *argv[])
 
     //qDebug()<<"start iteration "<<i;
 
-    for (int i=0; i<3;i++)
+//    for (int i=0; i<1;i++)
     {
-        PyRunner * w = PyEnvironment::getInstance().getInstanceModule("/home/sergio/develop/libs/pyqac/samples/pyTestSample/PyTestSample.py");
-
-        w->syncCallFunction("init", QStringList());
-        QString res = w->getResult("result_0");
-        qDebug() << "result:" << res;
-#if (0)
+        PyRunner * w = PyEnvironment::getInstance().getInstanceModule(pythonFilePath, dependencies);
         w->syncCallFunction("init", QStringList());
         w->setParam("param_0", "192.168.23.242");
         w->start();
@@ -34,10 +36,11 @@ int main(int argc, char *argv[])
         w->stop();
         w->syncCallFunction("deinit", QStringList());
         qDebug()<<"test result:"<<w->getResult("result_0");
-#endif
         w->deleteLater();
     }
     qDebug()<<"finished";
+
+
 
     return a.exec();
 }

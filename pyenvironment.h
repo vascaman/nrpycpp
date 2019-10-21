@@ -26,7 +26,7 @@ public:
     bool stop();
     ~PyEnvironment();
 
-    PyRunner * getInstanceModule(QString modulePath);
+    PyRunner * getInstanceModule(QString modulePath, QStringList dependecies = QStringList());
 };
 
 #endif // PYENVIRONMENT_H

@@ -5,9 +5,9 @@ PyEnvironment::~PyEnvironment()
     Py_Finalize();
 }
 
-PyRunner * PyEnvironment::getInstanceModule(QString modulePath)
+PyRunner * PyEnvironment::getInstanceModule(QString modulePath,QStringList dependecies)
 {
-    PyRunner* moduleRunner = new PyRunner(modulePath);
+    PyRunner* moduleRunner = new PyRunner(modulePath, dependecies);
     return moduleRunner;
 }
 

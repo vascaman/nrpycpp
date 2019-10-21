@@ -1,19 +1,16 @@
 #ifndef PYRUNNER_H
 #define PYRUNNER_H
-
 #include <QObject>
 #include <QString>
 #include <QThread>
 #include <QMutex>
 #include <QUuid>
 #include <QMap>
+#include "Python.h"
 #include <QDebug>
 #include <QFile>
 #include <QDir>
 #include <QTimer>
-#include <QMetaType>
-
-#include "Python.h"
 
 struct PyQACCall
 {
@@ -32,6 +29,7 @@ class PyRunner : public QObject
 {
     Q_OBJECT
 
+    QStringList m_dependecies;
     QString m_sourceFilePy;
     QString m_scriptFileName;
     QString m_scriptFilePath;
@@ -64,7 +62,7 @@ class PyRunner : public QObject
 
 
 public:
-    PyRunner(QString scriptPath);
+    PyRunner(QString scriptPath, QStringList dependecies=QStringList());
     ~PyRunner();
 
     //changing status
@@ -100,4 +98,3 @@ private slots:
 };
 
 #endif // PYRUNNER_H
-
