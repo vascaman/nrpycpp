@@ -6,11 +6,16 @@
 #include <QMutex>
 #include <QUuid>
 #include <QMap>
-#include "Python.h"
+
 #include <QDebug>
 #include <QFile>
 #include <QDir>
 #include <QTimer>
+
+#pragma push_macro("slots")
+#undef slots
+#include "Python.h"
+#pragma pop_macro("slots")
 
 struct PyQACCall
 {
@@ -60,6 +65,7 @@ class PyRunner : public QObject
     /*debug utils*/
     void printPyTuple(PyObject* tuple);
 
+    QString parseObject(PyObject * object);
 
 public:
     PyRunner(QString scriptPath, QStringList dependecies=QStringList());
@@ -84,6 +90,7 @@ public:
 
 private:
     void printCalls();
+
 signals:
     void setupSignal();
     void tearDownSignal();

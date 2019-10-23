@@ -85,15 +85,16 @@ QString PyRunner::getResult(QString resultName)
     QStringList params;
     params.append(resultName);
     QString result = syncCallFunction(functionName, params);
+//    qDebug()<<result;
     return  result;
 }
 
 PyGILState_STATE PyRunner::openCallContext()
 {
     PyGILState_STATE gstate = PyGILState_Ensure();
-    PyEval_InitThreads();
     return gstate;
 }
+
 void PyRunner::closeCallContext(PyGILState_STATE state)
 {
     PyGILState_Release(state);
@@ -108,38 +109,40 @@ void PyRunner::processCall(PyQACCall call)
         PyGILState_STATE gstate = openCallContext();
 
         PyObject * py_lib_mod_dict = getModuleDict();//borrowed reference of global variable
+
         Py_IncRef(py_lib_mod_dict);
+
         if(!py_lib_mod_dict)
         {
             call.error=true;
             call.errorMessage.append("PyQAC ERROR: Cannot find module at \""+m_sourceFilePy+"\"!");
         }
+
         char * function = call.functionName.toUtf8().data();
 
         //get function name
         PyObject * py_function_name = NULL;
+
+        //PyString_FromString
         if(!call.error)
-            py_function_name = PyString_FromString(function);//new reference
+            py_function_name = PyUnicode_FromString(function);// this->PyStringFromString(call.functionName);// PyString_FromString(function);//new reference
 
         if(!py_function_name)
             call.error=true;
-
 
         //get function object
         PyObject * py_func = NULL;
         if(!call.error)
             py_func = PyDict_GetItem(py_lib_mod_dict, py_function_name);//borrowed reference
 
-
         Py_IncRef(py_func);
 
         if(!py_func)
             call.error=true;
 
-        PyObject *py_args = getTupleParams(call.params);
+        PyObject * py_args = getTupleParams(call.params);//borrowed reference
 
-
-        PyObject *py_ret = NULL;
+        PyObject * py_ret = NULL;
 
         if(!call.error)
             py_ret = PyObject_CallObject(py_func, py_args);//new reference
@@ -147,17 +150,10 @@ void PyRunner::processCall(PyQACCall call)
         if(!py_ret)
             call.error=true;
 
-        //printPyTuple(py_args);
-        //qDebug()<<"calling "+call.functionName;
-
         if(!call.error)
         {
-            PyObject* objectsRepresentation = PyObject_Repr(py_ret);//new reference
-            const char* s = PyString_AsString(objectsRepresentation);
-            QString myReturn(s);
-            call.returnValue = s;
+            call.returnValue = parseObject(py_ret);
             Py_DecRef(py_ret);
-            Py_DecRef(objectsRepresentation);
         }else {
             call.errorMessage.append("PyQAC ERROR : Cannot find function named \""+call.functionName+"\"!");
         }
@@ -211,8 +207,7 @@ void PyRunner::setParam(QString paramName, QString paramValue)
     QStringList params;
     params.append(paramName);
     params.append(paramValue);
-
-    syncCallFunction(functionName, params);
+    asyncCallFunction(functionName, params);
 }
 
 void PyRunner::trackCall(PyQACCall call)
@@ -261,7 +256,7 @@ PyObject * PyRunner::getModuleDict()
     {
         loadCurrentModule();
 
-        PyObject * scriptName = PyString_FromString(m_scriptFileName.toUtf8().data());//new reference
+        PyObject * scriptName = PyUnicode_FromString(m_scriptFileName.toUtf8().data());//new reference
 
         //script meta data
         PyObject * m_py_lib_mod = PyImport_Import(scriptName);//new reference
@@ -294,7 +289,7 @@ PyObject * PyRunner::getModuleDict()
     return  m_module_dict;
 }
 
-PyObject *PyRunner::getTupleParams(QStringList params)
+PyObject *PyRunner::getTupleParams(QStringList params)//borrowed reference
 {
     if(params.size()==0)
         return NULL;
@@ -307,20 +302,22 @@ PyObject *PyRunner::getTupleParams(QStringList params)
     }
 
     formatString +=")";
-    //qDebug()<<formatString;
+
     const char * formatChars = formatString.toUtf8().data();
-    PyObject * args = Py_BuildValue(formatChars, "");
+
+    PyErr_Print();//if you remove this, python >3 stops working
+
+    PyObject * args = Py_BuildValue(formatChars, "");//new reference
+
     for(int i=0; i<params.size(); i++)
     {
         QString param = params[i];
-        PyObject * value = PyString_FromString(param.toUtf8().data());//new reference
+        PyObject * value = PyUnicode_FromFormat(param.toUtf8().data());//new reference
+        PyErr_Print();
         PyTuple_SetItem(args, i, value);//steals the reference
     }
 
-    //printPyTuple(args);
-
     return args;
-
 }
 
 void PyRunner::printPyTuple(PyObject *tuple)
@@ -331,10 +328,40 @@ void PyRunner::printPyTuple(PyObject *tuple)
     {
         PyObject * tupleValue = PyTuple_GetItem(tuple,i); //Borrowed reference
         PyObject* objectsRepresentation = PyObject_Repr(tupleValue);//New reference
-        const char* s = PyString_AsString(objectsRepresentation);
-        qDebug()<<s;
+        const char* s = PyByteArray_AsString(objectsRepresentation);
         Py_DecRef(objectsRepresentation);
     }
+}
+
+QString PyRunner::parseObject(PyObject *object)
+{   
+    PyTypeObject* type = object->ob_type;
+    const char* p = type->tp_name;
+
+    QString returnValue = "";
+
+    if(QString("str").compare(p)==0)
+    {
+        PyObject* objectsRepresentation = PyObject_Repr(object);//new reference
+
+#if PY_MAJOR_VERSION == 2
+        const char* s = PyString_AsString(objectsRepresentation);
+#elif PY_MAJOR_VERSION == 3
+        PyObject* str = PyUnicode_AsEncodedString(objectsRepresentation, "utf-8", "~E~");//new reference
+        const char* s = PyBytes_AsString(str);
+        Py_DecRef(str);
+#endif
+        PyErr_Print();
+        returnValue = QString(s);
+        Py_DecRef(objectsRepresentation);
+    }else if(QString("int").compare(p)==0)
+    {
+        PyObject * strObject = PyObject_Str(object);//new reference
+        returnValue = parseObject(strObject);
+        Py_DecRef(strObject);
+    }
+
+    return returnValue;
 }
 
 void PyRunner::loadCurrentModule()
@@ -344,7 +371,7 @@ void PyRunner::loadCurrentModule()
 
     PyObject* sys = PyImport_ImportModule( "sys" );//new reference
     PyObject* sys_path = PyObject_GetAttrString( sys, "path" );//new reference
-    PyObject* folder_path = PyString_FromString( m_scriptFilePath.toUtf8().data() );//new reference
+    PyObject* folder_path = PyUnicode_FromString( m_scriptFilePath.toUtf8().data() );//new reference
 
     //add script path to python search path
     PyList_Append( sys_path, folder_path );
@@ -352,7 +379,7 @@ void PyRunner::loadCurrentModule()
     //add dependecies path to python search path
     foreach (QString dependecy, m_dependecies)
     {
-        PyObject* dependency_path = PyString_FromString(dependecy.toUtf8().data());//new reference
+        PyObject* dependency_path = PyUnicode_FromString(dependecy.toUtf8().data());//new reference
         PyList_Append( sys_path, dependency_path);
         Py_DecRef(dependency_path);
     }
@@ -376,8 +403,6 @@ void PyRunner::unloadCurrentModule()
         unloadCommand = "del sys.modules[\""+dependency+"\"]";
         PyRun_SimpleString(unloadCommand.toUtf8().data());
     }
-
-
 
     PyGILState_Release(gstate);
     PyEval_ReleaseLock();
@@ -403,7 +428,8 @@ QString PyRunner::syncCallFunction(QString functionName, QStringList params)
 
     while (!checkCall(call.CallID))
     {
-        usleep(500);
+
+        usleep(1);
     }
 
     call = getCall(call.CallID);

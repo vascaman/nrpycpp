@@ -1,6 +1,9 @@
 #ifndef PYENVIRONMENT_H
 #define PYENVIRONMENT_H
-#include <Python.h>
+#pragma push_macro("slots")
+#undef slots
+#include "Python.h"
+#pragma pop_macro("slots")
 #include "pyrunner.h"
 #include <QMap>
 
