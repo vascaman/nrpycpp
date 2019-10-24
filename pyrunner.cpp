@@ -207,7 +207,7 @@ void PyRunner::setParam(QString paramName, QString paramValue)
     QStringList params;
     params.append(paramName);
     params.append(paramValue);
-    asyncCallFunction(functionName, params);
+    syncCallFunction(functionName, params);
 }
 
 void PyRunner::trackCall(PyQACCall call)
