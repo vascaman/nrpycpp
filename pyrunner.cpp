@@ -139,6 +139,7 @@ void PyRunner::processCall(PyQACCall call)
 
         if(!py_func)
             call.error=true;
+            call.errorMessage.append("PyQAC ERROR : cannot find funtion named \""+call.functionName+"\"!");
 
         PyObject * py_args = getTupleParams(call.params);//borrowed reference
 
@@ -155,7 +156,7 @@ void PyRunner::processCall(PyQACCall call)
             call.returnValue = parseObject(py_ret);
             Py_DecRef(py_ret);
         }else {
-            call.errorMessage.append("PyQAC ERROR : Cannot find function named \""+call.functionName+"\"!");
+            call.errorMessage.append("PyQAC ERROR : retrieving result from function named \""+call.functionName+"\"!");
         }
 
         closeCallContext(gstate);
@@ -359,6 +360,25 @@ QString PyRunner::parseObject(PyObject *object)
         PyObject * strObject = PyObject_Str(object);//new reference
         returnValue = parseObject(strObject);
         Py_DecRef(strObject);
+    }else if(QString("float").compare(p)==0)
+    {
+        PyObject * strObject = PyObject_Str(object);//new reference
+        returnValue = parseObject(strObject);
+        Py_DecRef(strObject);
+    }else if(QString("double").compare(p)==0)
+    {
+        PyObject * strObject = PyObject_Str(object);//new reference
+        returnValue = parseObject(strObject);
+        Py_DecRef(strObject);
+    }else if(QString("NoneType").compare(p)==0)
+    {
+        //do nothing
+    }else
+    {
+//        qDebug()<<"PyQAC Warning: attemp to parse unknown type"<<p;
+        PyObject * strObject = PyObject_Str(object);//new reference
+        returnValue = parseObject(strObject);
+        Py_DecRef(strObject);
     }
 
     return returnValue;
@@ -428,7 +448,6 @@ QString PyRunner::syncCallFunction(QString functionName, QStringList params)
 
     while (!checkCall(call.CallID))
     {
-
         usleep(1);
     }
 
