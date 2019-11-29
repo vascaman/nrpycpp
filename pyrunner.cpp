@@ -354,6 +354,7 @@ QString PyRunner::parseObject(PyObject *object)
 #endif
         PyErr_Print();
         returnValue = QString(s);
+        returnValue = returnValue.mid(1,returnValue.length()-2);
         Py_DecRef(objectsRepresentation);
     }else if(QString("int").compare(p)==0)
     {
