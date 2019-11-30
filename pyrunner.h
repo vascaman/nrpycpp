@@ -67,6 +67,7 @@ class PyRunner : public QObject
     void printCalls();
 
     void printPyList(PyObject *list);
+    void printPyDict(PyObject *list);
 
 
 public:
@@ -91,6 +92,7 @@ public:
     QString syncCallFunction(QString functionName, QStringList params);
 
 private:
+
 
 signals:
     void setupSignal();
