@@ -60,12 +60,14 @@ class PyRunner : public QObject
     PyGILState_STATE openCallContext();
     void closeCallContext(PyGILState_STATE state);
 
-
+    QString parseObject(PyObject * object);
     PyObject * getTupleParams(QStringList params);
     /*debug utils*/
     void printPyTuple(PyObject* tuple);
+    void printCalls();
 
-    QString parseObject(PyObject * object);
+    void printPyList(PyObject *list);
+
 
 public:
     PyRunner(QString scriptPath, QStringList dependecies=QStringList());
@@ -89,7 +91,6 @@ public:
     QString syncCallFunction(QString functionName, QStringList params);
 
 private:
-    void printCalls();
 
 signals:
     void setupSignal();

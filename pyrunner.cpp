@@ -5,11 +5,12 @@ PyRunner::~PyRunner()
     /*
      * Thread will self destroy when the finished() signal arrives
     */
-    Py_DecRef(m_module_dict);
+
     //unloadCurrentModule();
     //this->moveToThread(m_py_thread);
     //emit(tearDownSignal());
     tearDown();
+    Py_DecRef(m_module_dict);
 }
 
 PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
@@ -65,6 +66,7 @@ void PyRunner::tearDown()
 {
     //PyImport_Cleanup();
     //Py_Finalize();
+    unloadCurrentModule();
     m_py_thread->exit();
 }
 
@@ -109,7 +111,9 @@ void PyRunner::processCall(PyQACCall call)
         PyGILState_STATE gstate = openCallContext();
 
         PyObject * py_lib_mod_dict = getModuleDict();//borrowed reference of global variable
-
+//        closeCallContext(gstate);
+//        emit(callDidFinishedSlot(call));
+//        return;
         Py_IncRef(py_lib_mod_dict);
 
         if(!py_lib_mod_dict)
@@ -283,7 +287,6 @@ PyObject * PyRunner::getModuleDict()
         }
 
         Py_DecRef(m_py_lib_mod);
-
         Py_DecRef(scriptName);
     }
 
@@ -319,6 +322,19 @@ PyObject *PyRunner::getTupleParams(QStringList params)//borrowed reference
     }
 
     return args;
+}
+
+void PyRunner::printPyList(PyObject *list)
+{
+    int size = static_cast<int>(PyList_Size(list));
+    qDebug()<< "list size "<<size;
+    for (int i=0; i<size; i++)
+    {
+        PyObject * tupleValue = PyList_GetItem(list,i); //Borrowed reference
+//        PyObject* objectsRepresentation = PyObject_Repr(tupleValue);//New reference
+        qDebug()<<"value"<<i<<parseObject(tupleValue);
+//        Py_DecRef(objectsRepresentation);
+    }
 }
 
 void PyRunner::printPyTuple(PyObject *tuple)
@@ -405,6 +421,8 @@ void PyRunner::loadCurrentModule()
         Py_DecRef(dependency_path);
     }
 
+//    printPyList(sys_path);
+
     Py_DecRef(sys);
     Py_DecRef(sys_path);
     Py_DecRef(folder_path);
@@ -416,17 +434,23 @@ void PyRunner::unloadCurrentModule()
     //PyEval_InitThreads();
 
     //unload imported paths
-    QString unloadCommand = "del sys.modules[\""+m_scriptFileName+"\"]";
+    QString unloadCommand = "sys.path.remove(\""+m_scriptFilePath+"\")";
+    PyRun_SimpleString("import sys");
     PyRun_SimpleString(unloadCommand.toUtf8().data());
 
     foreach (QString dependency, m_dependecies)
     {
-        unloadCommand = "del sys.modules[\""+dependency+"\"]";
+        unloadCommand = "sys.path.remove(\""+dependency+"\")";
         PyRun_SimpleString(unloadCommand.toUtf8().data());
     }
 
+//    PyObject* sys = PyImport_ImportModule( "sys" );//new reference
+//    PyObject* sys_path = PyObject_GetAttrString( sys, "path" );//new reference
+//    printPyList(sys_path);
+
+
     PyGILState_Release(gstate);
-    PyEval_ReleaseLock();
+//    PyEval_ReleaseLock();
 }
 
 void PyRunner::getReturnValues()
