@@ -16,7 +16,6 @@ PyEnvironment::PyEnvironment()
     Py_Initialize();
     PyEval_InitThreads();
     PyEval_ReleaseLock();
-
 }
 
 PyEnvironment &PyEnvironment::getInstance()

@@ -5,10 +5,6 @@ PyRunner::~PyRunner()
     /*
      * Thread will self destroy when the finished() signal arrives
     */
-
-    //unloadCurrentModule();
-    //this->moveToThread(m_py_thread);
-    //emit(tearDownSignal());
     tearDown();
     Py_DecRef(m_module_dict);
 }
@@ -53,10 +49,7 @@ void PyRunner::setup()
 
         m_scriptFileName = scriptFileInfo.completeBaseName();
         m_scriptFilePath = scriptFileInfo.dir().path();
-
-        //Py_Initialize();
-
-    }catch(...)
+    } catch(...)
     {
         PyErr_Print();
     }
@@ -64,8 +57,6 @@ void PyRunner::setup()
 
 void PyRunner::tearDown()
 {
-    //PyImport_Cleanup();
-    //Py_Finalize();
     unloadCurrentModule();
     m_py_thread->exit();
 }
@@ -87,7 +78,6 @@ QString PyRunner::getResult(QString resultName)
     QStringList params;
     params.append(resultName);
     QString result = syncCallFunction(functionName, params);
-//    qDebug()<<result;
     return  result;
 }
 
@@ -100,8 +90,11 @@ PyGILState_STATE PyRunner::openCallContext()
 void PyRunner::closeCallContext(PyGILState_STATE state)
 {
     PyGILState_Release(state);
-    //not needed https://stackoverflow.com/questions/8451334/why-is-pygilstate-release-throwing-fatal-python-errors
-    //PyEval_ReleaseLock();
+    /*
+     * not needed
+     * Please see https://stackoverflow.com/questions/8451334/why-is-pygilstate-release-throwing-fatal-python-errors
+     */
+    /* PyEval_ReleaseLock(); */
 }
 
 void PyRunner::processCall(PyQACCall call)
@@ -111,9 +104,6 @@ void PyRunner::processCall(PyQACCall call)
         PyGILState_STATE gstate = openCallContext();
 
         PyObject * py_lib_mod_dict = getModuleDict();//borrowed reference of global variable
-//        closeCallContext(gstate);
-//        emit(callDidFinishedSlot(call));
-//        return;
         Py_IncRef(py_lib_mod_dict);
 
         if(!py_lib_mod_dict)
@@ -128,32 +118,36 @@ void PyRunner::processCall(PyQACCall call)
         PyObject * py_function_name = NULL;
 
         //PyString_FromString
-        if(!call.error)
+        if(!call.error) {
             py_function_name = PyUnicode_FromString(function);// this->PyStringFromString(call.functionName);// PyString_FromString(function);//new reference
+        }
 
-        if(!py_function_name)
+        if(!py_function_name) {
             call.error=true;
+        }
 
         //get function object
         PyObject * py_func = NULL;
-        if(!call.error)
+        if(!call.error) {
             py_func = PyDict_GetItem(py_lib_mod_dict, py_function_name);//borrowed reference
+        }
 
-        //Py_IncRef(py_func);
-
-        if(!py_func)
+        if(!py_func) {
             call.error=true;
             call.errorMessage.append("PyQAC ERROR : cannot find funtion named \""+call.functionName+"\"!");
+        }
 
         PyObject * py_args = getTupleParams(call.params);//borrowed reference
 
         PyObject * py_ret = NULL;
 
-        if(!call.error)
+        if(!call.error) {
             py_ret = PyObject_CallObject(py_func, py_args);//new reference
+        }
 
-        if(!py_ret)
+        if(!py_ret) {
             call.error=true;
+        }
 
         if(!call.error)
         {
@@ -167,15 +161,13 @@ void PyRunner::processCall(PyQACCall call)
 
         Py_DecRef(py_lib_mod_dict);
         Py_DecRef(py_function_name);
-        //Py_DecRef(py_func);
 
-        if(params.size())
+        if(params.size()) {
             Py_DecRef(py_args);
-
+        }
         emit(callDidFinishedSlot(call));
     } catch (...)
     {
-        //qDebug() << e.what();
         PyErr_Print();
     }
 }
@@ -200,8 +192,6 @@ void PyRunner::setParams(const QStringList &params)
 
     stringParams += "]";
 
-    //qDebug()<<stringParams;
-
     syncCallFunction("setParams", params);
 }
 
@@ -219,7 +209,6 @@ void PyRunner::trackCall(PyQACCall call)
 {
     m_callsMutex.lock();
     m_calls.insert(call.CallID, call);
-    //printCalls();
     m_callsMutex.unlock();
 }
 
@@ -268,7 +257,6 @@ PyObject * PyRunner::getModuleDict()
 
         if(!m_py_lib_mod)
         {
-            //qDebug()<<"problem";
             PyErr_Print();
             m_module_dict = NULL;
             return NULL;
@@ -280,12 +268,10 @@ PyObject * PyRunner::getModuleDict()
 
         if(!m_module_dict)
         {
-            //qDebug()<<"problem";
             PyErr_Print();
             m_module_dict = NULL;
             return NULL;
         }
-//        printPyDict(m_module_dict);
         Py_DecRef(m_py_lib_mod);
         Py_DecRef(scriptName);
     }
@@ -344,9 +330,7 @@ void PyRunner::printPyList(PyObject *list)
     for (int i=0; i<size; i++)
     {
         PyObject * tupleValue = PyList_GetItem(list,i); //Borrowed reference
-//        PyObject* objectsRepresentation = PyObject_Repr(tupleValue);//New reference
         qDebug()<<"value"<<i<<parseObject(tupleValue);
-//        Py_DecRef(objectsRepresentation);
     }
 }
 
@@ -405,7 +389,6 @@ QString PyRunner::parseObject(PyObject *object)
         //do nothing
     }else
     {
-//        qDebug()<<"PyQAC Warning: attemp to parse unknown type"<<p;
         PyObject * strObject = PyObject_Str(object);//new reference
         returnValue = parseObject(strObject);
         Py_DecRef(strObject);
@@ -416,9 +399,6 @@ QString PyRunner::parseObject(PyObject *object)
 
 void PyRunner::loadCurrentModule()
 {
-    //PyRun_SimpleString("import sys");
-    //PyRun_SimpleString("print sys.modules.keys()");
-
     PyObject* sys = PyImport_ImportModule( "sys" );//new reference
     PyObject* sys_path = PyObject_GetAttrString( sys, "path" );//new reference
     PyObject* folder_path = PyUnicode_FromString( m_scriptFilePath.toUtf8().data() );//new reference
@@ -434,8 +414,6 @@ void PyRunner::loadCurrentModule()
         Py_DecRef(dependency_path);
     }
 
-    //printPyList(sys_path);
-
     Py_DecRef(sys);
     Py_DecRef(sys_path);
     Py_DecRef(folder_path);
@@ -444,7 +422,6 @@ void PyRunner::loadCurrentModule()
 void PyRunner::unloadCurrentModule()
 {
     PyGILState_STATE gstate = PyGILState_Ensure();
-    //PyEval_InitThreads();
 
     //unload imported paths
     QString unloadPathCommand = "sys.path.remove(\""+m_scriptFilePath+"\")";
@@ -460,7 +437,6 @@ void PyRunner::unloadCurrentModule()
     }
 
     PyGILState_Release(gstate);
-//    PyEval_ReleaseLock();
 }
 
 void PyRunner::getReturnValues()
