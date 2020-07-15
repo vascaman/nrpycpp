@@ -30,6 +30,13 @@ struct PyQACCall
 
 Q_DECLARE_METATYPE(PyQACCall)
 
+enum  PyRunnerError
+{
+    PyRunnerError_OK = 0,//no error
+    PyRunnerError_SYNTAX_ERROR = 1,
+    PyRunnerError_SEMANTIC_ERROR = 2
+};
+
 class PyRunner : public QObject
 {
     Q_OBJECT
@@ -69,6 +76,10 @@ class PyRunner : public QObject
     void printPyList(PyObject *list);
     void printPyDict(PyObject *list);
 
+    //errors
+    PyRunnerError m_errorCode;
+    QString m_errorString;
+    QString m_errorMessage;
 
 public:
     PyRunner(QString scriptPath, QStringList dependecies=QStringList());
@@ -90,6 +101,13 @@ public:
     //calling custom functions
     void asyncCallFunction(QString functionName, QStringList params);
     QString syncCallFunction(QString functionName, QStringList params);
+
+    //checking for errors
+    PyRunnerError getErrorCode();
+    QString getErrorString();
+    QString getErrorMessage();
+
+    QString checkError();
 
 private:
 
