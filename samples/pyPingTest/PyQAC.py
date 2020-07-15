@@ -8,6 +8,7 @@ class PyQAC(threading.Thread):
         self.thread_id = thread_id
         self.thread_name = thread_name
         self.looping = 0
+        self.daemon = True
         self.pingCounter = 0
         self.totalPingTime = 0
         self.hostTarget = "8.8.8.8"
@@ -31,6 +32,7 @@ class PyQAC(threading.Thread):
             time.sleep(1)
             self.counter+=1
             self.totalPingTime += self.getPingTime(self.hostTarget)
+        print 'thread '+self.thread_name+' stopped'
 
     def getPingTime(self, hostname):
             response = subprocess.check_output("ping -c 1 " + hostname + " | grep 'time='", shell=True)
@@ -40,14 +42,15 @@ class PyQAC(threading.Thread):
             return timeMS
 
     def stop(self):
-        print 'thread '+self.thread_name+' stopped'
+        print 'thread '+self.thread_name+' stopping soon...'
         self.running = False
 
     def getAvgPingTime(self):
         return self.totalPingTime/self.counter
 
 
-myThread = PyQAC(1, "PythonPingThread")
+myThread = type('PyQAC', (object,), {})()
+# PyQAC(1, "PythonPingThread")
 threadId = 0
 def init():
     global myThread
@@ -56,7 +59,9 @@ def init():
     myThread = PyQAC(threadId, "PythonPingThread"+str(threadId))
 
 def printCose(cose):
-    print "ciao"+cose
+	result = "ciao"+cose
+	print result
+	return result
 
 def start():
     global myThread
@@ -66,10 +71,13 @@ def stop():
     global myThread
     myThread.stop()
 
+def checkError():
+    return "";
+
 def deinit():
     global myThread
     myThread.join()
-    myThread.terminate()
+    #myThread.terminate()
 
 def setParam(paramName, paramValue):
     if(paramName=="param_0" and len(paramValue)>0):

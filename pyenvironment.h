@@ -22,6 +22,7 @@ private:
     PyEnvironment();
     PyEnvironment(PyEnvironment const& copy);
     PyEnvironment & operator = (PyEnvironment const&copy);
+    QMap<QString, PyRunner*> m_modules;
 
 public:
     static PyEnvironment &getInstance();
@@ -30,6 +31,7 @@ public:
     ~PyEnvironment();
 
     PyRunner * getInstanceModule(QString modulePath, QStringList dependecies = QStringList());
+    void unloadModule(PyRunner* runner);
 };
 
 #endif // PYENVIRONMENT_H
