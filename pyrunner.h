@@ -77,7 +77,8 @@ class PyRunner : public QObject
     void printPyDict(PyObject *list);
 
     //errors
-    PyRunnerError m_errorCode;
+    int m_errorCode;
+    bool m_syntaxError;
     QString m_errorString;
     QString m_errorMessage;
 
@@ -103,11 +104,11 @@ public:
     QString syncCallFunction(QString functionName, QStringList params);
 
     //checking for errors
-    PyRunnerError getErrorCode();
+    int getErrorCode();
     QString getErrorString();
     QString getErrorMessage();
 
-    QString checkError();
+    void checkError();
 
 private:
 
