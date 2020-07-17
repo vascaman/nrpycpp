@@ -16,6 +16,7 @@ PyRunner::~PyRunner()
 PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
 {
     m_errorCode = PyRunnerError_OK;
+    m_syntaxError = false;
     m_sourceFilePy = scriptPath;
     m_dependecies = dependecies;
     m_module_dict = NULL;
@@ -107,7 +108,7 @@ void PyRunner::closeCallContext(PyGILState_STATE state)
 
 void PyRunner::processCall(PyQACCall call)
 {
-    if(m_errorCode!=PyRunnerError_OK)
+    if(m_syntaxError)
     {
         emit(callDidFinishedSlot(call));
         return;
@@ -476,7 +477,7 @@ void PyRunner::getReturnValues()
 
 }
 
-QString PyRunner::syncCallFunction(QString functionName, QStringList params)
+QString PyRunner::syncCallFunction(QString functionName, QStringList params = QStringList())
 {
     PyQACCall call;
     call.CallID = QUuid::createUuid();
@@ -500,6 +501,7 @@ QString PyRunner::syncCallFunction(QString functionName, QStringList params)
 
     if(call.error)
     {
+        m_syntaxError = true;
         m_errorCode = PyRunnerError_SYNTAX_ERROR;
         m_errorString = "Syntax error";
         m_errorMessage = call.errorMessage;
@@ -509,7 +511,7 @@ QString PyRunner::syncCallFunction(QString functionName, QStringList params)
     return call.returnValue;
 }
 
-PyRunnerError PyRunner::getErrorCode()
+int PyRunner::getErrorCode()
 {
     return m_errorCode;
 }
@@ -524,17 +526,17 @@ QString PyRunner::getErrorMessage()
     return m_errorMessage;
 }
 
-QString PyRunner::checkError()
-{
-    QString error = syncCallFunction("checkError", QStringList());
-    if(error.size())
-    {
-        m_errorCode = PyRunnerError_SEMANTIC_ERROR;
-        m_errorString = m_scriptFileName+" reported error";
-        m_errorMessage = error;
-    }
 
-    return error;
+void PyRunner::checkError()
+{
+    if(!m_syntaxError)
+        m_errorCode = syncCallFunction("getErrorCode", QStringList()).toInt();
+
+    if(!m_syntaxError)
+        m_errorMessage = syncCallFunction("getErrorMsg", QStringList());
+
+    if(m_errorCode!=0 && !m_syntaxError)
+        m_errorString = m_scriptFileName+" reported error";
 }
 
 void PyRunner::asyncCallFunction(QString functionName, QStringList params)
