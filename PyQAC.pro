@@ -8,8 +8,12 @@ QT -= gui
 CONFIG += c++11 console
 CONFIG -= app_bundle
 CONFIG += debug_and_release
-TEMPLATE = lib
 
+TEMPLATE = lib
+win32{
+    CONFIG -= dll
+    CONFIG += shared static
+}
 OUTPUT_DIR = $${QMAKE_CXX}_qt-$${QT_VERSION}
 CONFIG(release, debug|release){
     TARGET = release/$$OUTPUT_DIR/$$TARGET
@@ -39,8 +43,10 @@ SOURCES += \
         pyenvironment.cpp \
         pyrunner.cpp
 
-LIBS += -lpython$${PYTHON_VERSION}
-INCLUDEPATH += /usr/include/python$${PYTHON_VERSION}/
+
+INCLUDEPATH += $${PYTHON_INCLUDE_PATH}
+LIBS += -L$${PYTHON_LIB_PATH} -lpython$${PYTHON_VERSION}
+message("LIBS = $${LIBS}")
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin

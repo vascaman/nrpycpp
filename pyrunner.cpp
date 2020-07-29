@@ -130,7 +130,10 @@ void PyRunner::processCall(PyQACCall call)
             call.errorMessage.append("PyQAC ERROR: Cannot find module at \""+m_sourceFilePy+"\"!");
         }
 
-        char * function = call.functionName.toUtf8().data();
+//        char * function =  call.functionName.toUtf8().data();
+
+        char * function = new char(call.functionName.length() + 1);
+        strcpy(function, call.functionName.toLatin1().constData());
 
         //get function name
         PyObject * py_function_name = NULL;
@@ -149,9 +152,12 @@ void PyRunner::processCall(PyQACCall call)
 
         //Py_IncRef(py_func);
 
-        if(!py_func)
+        if(!py_func){
             call.error=true;
             call.errorMessage.append("PyQAC ERROR : cannot find function named \""+call.functionName+"\"!");
+            qDebug()<<call.errorMessage;
+        }
+
 
         PyObject * py_args = getTupleParams(call.params);//borrowed reference
 
@@ -169,6 +175,7 @@ void PyRunner::processCall(PyQACCall call)
             Py_DecRef(py_ret);
         }else {
             call.errorMessage.append("PyQAC ERROR : retrieving result from function named \""+call.functionName+"\"!");
+
         }
 
 
@@ -311,23 +318,30 @@ PyObject *PyRunner::getTupleParams(QStringList params)//borrowed reference
 
     for(int i=0; i<params.size(); i++)
     {
-        formatString +="s";//maybe check by type here
+        formatString +="s";
     }
 
     formatString +=")";
+//    qDebug()<<"formatString"<<formatString;
+//    const char * formatChars = formatString.toUtf8().data();
 
-    const char * formatChars = formatString.toUtf8().data();
+    char * formatChars = new char(formatString.length() + 1);
+    strcpy(formatChars, formatString.toLatin1().constData());
 
     PyErr_Print();//if you remove this, python >3 stops working
 
-    PyObject * args = Py_BuildValue(formatChars, "");//new reference
+    PyObject * args;
 
-    for(int i=0; i<params.size(); i++)
+    if(params.count()==1)
     {
-        QString param = params[i];
-        PyObject * value = PyUnicode_FromFormat(param.toUtf8().data());//new reference
-        PyErr_Print();
-        PyTuple_SetItem(args, i, value);//steals the reference
+        args = Py_BuildValue(formatChars, qPrintable(params[0]));//new reference
+    }else if(params.count()==2)
+    {
+        args = Py_BuildValue(formatChars, qPrintable(params[0]), qPrintable(params[1]));//new reference
+    }else
+    {
+        args = Py_BuildValue(formatChars);
+        qDebug()<<"Problem parsing PYQAC args";
     }
 
     return args;
@@ -381,6 +395,7 @@ QString PyRunner::parseObject(PyObject *object)
 
     if(QString("str").compare(p)==0)
     {
+
         PyObject* objectsRepresentation = PyObject_Repr(object);//new reference
 
 #if PY_MAJOR_VERSION == 2
@@ -492,7 +507,11 @@ QString PyRunner::syncCallFunction(QString functionName, QStringList params = QS
 
     while (!checkCall(call.CallID))
     {
+#ifdef WIN32
+         _sleep(1000);
+#else
         usleep(1);
+#endif
     }
 
     call = getCall(call.CallID);

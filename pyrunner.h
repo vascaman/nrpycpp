@@ -33,8 +33,8 @@ Q_DECLARE_METATYPE(PyQACCall)
 enum  PyRunnerError
 {
     PyRunnerError_OK = 0,//no error
-    PyRunnerError_SYNTAX_ERROR = 1,
-    PyRunnerError_SEMANTIC_ERROR = 2
+    PyRunnerError_SYNTAX_ERROR = 3001,
+    PyRunnerError_SEMANTIC_ERROR = 3002
 };
 
 class PyRunner : public QObject
