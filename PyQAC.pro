@@ -1,3 +1,8 @@
+!include (depspath.pri) {
+    error( "PyQAC lib Cannot find depspath.pri" )
+}
+
+
 QT -= gui
 
 #PYTHON_VERSION = 3.5m
@@ -6,8 +11,12 @@ PYTHON_VERSION = 2.7
 CONFIG += c++11 console
 CONFIG -= app_bundle
 CONFIG += debug_and_release
-TEMPLATE = lib
 
+TEMPLATE = lib
+win32{
+    CONFIG -= dll
+    CONFIG += shared static
+}
 OUTPUT_DIR = $${QMAKE_CXX}_qt-$${QT_VERSION}
 CONFIG(release, debug|release){
     TARGET = release/$$OUTPUT_DIR/$$TARGET
@@ -33,12 +42,20 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-#        main.cpp \
+        main.cpp \
         pyenvironment.cpp \
         pyrunner.cpp
 
-LIBS += -lpython$${PYTHON_VERSION}
-INCLUDEPATH += /usr/include/python$${PYTHON_VERSION}/
+INCLUDEPATH += $${PYTHON_INCLUDE_PATH}\Windows
+INCLUDEPATH += $${PYTHON_INCLUDE_PATH}
+
+CONFIG(debug, debug|release) {
+    LIBS += -L$${PYTHON_LIB_PATH} -lpython27
+} else {
+    LIBS += -L$${PYTHON_LIB_PATH} -lpython27
+}
+
+
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
