@@ -1,8 +1,10 @@
+!include (depspath.pri) {
+    error( "PyQAC Cannot find depspath.pri" )
+}
+
+VERSION 1.0.1
+
 QT -= gui
-
-#PYTHON_VERSION = 3.5m
-PYTHON_VERSION = 2.7
-
 CONFIG += c++11 console
 CONFIG -= app_bundle
 CONFIG += debug_and_release
