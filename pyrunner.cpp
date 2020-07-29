@@ -115,7 +115,7 @@ void PyRunner::processCall(PyQACCall call)
     }
 
     try {
-        qDebug()<<"resolving call"<<call.functionName;
+
         PyGILState_STATE gstate = openCallContext();
 
         PyObject * py_lib_mod_dict = getModuleDict();//borrowed reference of global variable
@@ -134,8 +134,6 @@ void PyRunner::processCall(PyQACCall call)
 
         char * function = new char(call.functionName.length() + 1);
         strcpy(function, call.functionName.toLatin1().constData());
-
-        qDebug()<<"function:"<<function;
 
         //get function name
         PyObject * py_function_name = NULL;
@@ -336,32 +334,15 @@ PyObject *PyRunner::getTupleParams(QStringList params)//borrowed reference
 
     if(params.count()==1)
     {
-        qDebug()<<"1 arg";
         args = Py_BuildValue(formatChars, qPrintable(params[0]));//new reference
     }else if(params.count()==2)
     {
-        qDebug()<<"2 args";
         args = Py_BuildValue(formatChars, qPrintable(params[0]), qPrintable(params[1]));//new reference
     }else
     {
         args = Py_BuildValue(formatChars);
         qDebug()<<"Problem parsing PYQAC args";
     }
-
-
-    qDebug()<<"here";
-
-//    PyObject * args = Py_BuildValue(formatChars, argList);//new reference
-
-//    for(int i=0; i<params.size(); i++)
-//    {
-//        QString param = params[i];
-//        PyObject * value = PyUnicode_FromFormat(param.toUtf8().data());//new reference
-//        PyErr_Print();
-//        PyTuple_SetItem(args, i, value);//steals the reference
-//    }
-
-    printPyTuple(args);
 
     return args;
 }
@@ -528,7 +509,7 @@ QString PyRunner::syncCallFunction(QString functionName, QStringList params = QS
     {
 #ifdef WIN32
          _sleep(1000);
-#elif
+#else
         usleep(1);
 #endif
     }
