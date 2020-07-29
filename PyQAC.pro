@@ -2,7 +2,7 @@
     error( "PyQAC Cannot find depspath.pri" )
 }
 
-VERSION 1.0.1
+VERSION = 1.0.1
 
 QT -= gui
 CONFIG += c++11 console
@@ -60,3 +60,4 @@ DISTFILES += \
     PyQAC.py \
     PyQAC2.py \
     PyTest.py
+
