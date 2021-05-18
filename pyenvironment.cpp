@@ -13,7 +13,7 @@ PyRunner * PyEnvironment::getInstanceModule(QString modulePath,QStringList depen
 
 PyEnvironment::PyEnvironment()
 {
-
+    m_initialized = false;
 }
 
 PyEnvironment &PyEnvironment::getInstance()
@@ -24,10 +24,14 @@ PyEnvironment &PyEnvironment::getInstance()
 
 bool PyEnvironment::start()
 {
-    Py_Initialize();
-    PyEval_InitThreads();
-    PyEval_ReleaseLock();
-    return true;
+    if(!m_initialized)
+    {
+        Py_Initialize();
+        PyEval_InitThreads();
+        PyEval_ReleaseLock();
+        m_initialized = true;
+    }
+    return m_initialized;
 }
 
 bool PyEnvironment::stop()
@@ -35,8 +39,9 @@ bool PyEnvironment::stop()
 
     try {
 
-        PyGILState_STATE gstate = PyGILState_Ensure();
+//        PyGILState_STATE gstate = PyGILState_Ensure();
         Py_Finalize();
+        m_initialized = false;
 //        PyGILState_Release(gstate);
     } catch (...) {
 
