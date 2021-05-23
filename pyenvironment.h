@@ -18,6 +18,8 @@ Q_DECLARE_METATYPE(PyEnvModule)
 
 class PyEnvironment
 {
+    bool m_initialized;
+
 private:
     PyEnvironment();
     PyEnvironment(PyEnvironment const& copy);
