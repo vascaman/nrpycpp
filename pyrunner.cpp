@@ -156,7 +156,10 @@ void PyRunner::processCall(PyQACCall call)
         //get function object
         PyObject * py_func = NULL;
         if(!call.error)
+        {
             py_func = PyDict_GetItem(py_lib_mod_dict, py_function_name);//borrowed reference
+            Py_IncRef(py_func);
+        }
 
         if(!py_func){
             call.error=true;
@@ -186,7 +189,7 @@ void PyRunner::processCall(PyQACCall call)
 
         Py_DecRef(py_lib_mod_dict);
         Py_DecRef(py_function_name);
-        //Py_DecRef(py_func);
+        Py_DecRef(py_func);
 
         if(params.size())
             Py_DecRef(py_args);
