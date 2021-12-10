@@ -405,8 +405,10 @@ QString PyRunner::parseObject(PyObject *object)
         PyObject* objectsRepresentation = PyObject_Repr(object);//new reference
 
 #if PY_MAJOR_VERSION == 2
+#warning "Using PY2 Code"
         const char* s = PyString_AsString(objectsRepresentation);
 #elif PY_MAJOR_VERSION == 3
+#warning "Using PY3 Code"
         PyObject* str = PyUnicode_AsEncodedString(objectsRepresentation, "utf-8", "~E~");//new reference
         const char* s = PyBytes_AsString(str);
         Py_DecRef(str);
