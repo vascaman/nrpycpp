@@ -135,7 +135,7 @@ void PyRunner::processCall(PyQACCall call)
 
         if(!py_lib_mod_dict)
         {
-            call.error=true;
+            call.error = true;
             call.errorMessage.append("PyQAC ERROR: Cannot find module at \""+m_sourceFilePy+"\"!");
         }
 
@@ -281,10 +281,10 @@ PyObject * PyRunner::getModuleDict()
     {
         loadCurrentModule();
 
-        PyObject * scriptName = PyUnicode_FromString(m_scriptFileName.toUtf8().data());//new reference
+        PyObject * scriptName = PyUnicode_FromString(m_scriptFileName.toUtf8().data()); //new reference
 
         //script meta data
-        PyObject * m_py_lib_mod = PyImport_Import(scriptName);//new reference
+        PyObject * m_py_lib_mod = PyImport_Import(scriptName); //new reference
 
         if(!m_py_lib_mod)
         {
@@ -399,7 +399,6 @@ QString PyRunner::parseObject(PyObject *object)
 
     if(QString("str").compare(p)==0)
     {
-
         PyObject* objectsRepresentation = PyObject_Repr(object);//new reference
 
 #if PY_MAJOR_VERSION == 2
@@ -413,25 +412,30 @@ QString PyRunner::parseObject(PyObject *object)
         returnValue = QString(s);
         returnValue = returnValue.mid(1,returnValue.length()-2);
         Py_DecRef(objectsRepresentation);
-    }else if(QString("int").compare(p)==0)
+    }
+    else if(QString("int").compare(p)==0)
     {
         PyObject * strObject = PyObject_Str(object);//new reference
         returnValue = parseObject(strObject);
         Py_DecRef(strObject);
-    }else if(QString("float").compare(p)==0)
+    }
+    else if(QString("float").compare(p)==0)
     {
         PyObject * strObject = PyObject_Str(object);//new reference
         returnValue = parseObject(strObject);
         Py_DecRef(strObject);
-    }else if(QString("double").compare(p)==0)
+    }
+    else if(QString("double").compare(p)==0)
     {
         PyObject * strObject = PyObject_Str(object);//new reference
         returnValue = parseObject(strObject);
         Py_DecRef(strObject);
-    }else if(QString("NoneType").compare(p)==0)
+    }
+    else if(QString("NoneType").compare(p)==0)
     {
         //do nothing
-    }else
+    }
+    else
     {
 //        qDebug()<<"PyQAC Warning: attemp to parse unknown type"<<p;
         PyObject * strObject = PyObject_Str(object);//new reference
