@@ -404,18 +404,17 @@ QString PyRunner::parseObject(PyObject *object)
     {
         PyObject* objectsRepresentation = PyObject_Repr(object);//new reference
 
-#if PY_MAJOR_VERSION == 2
-#warning "Using PY2 Code"
-        const char* s = PyString_AsString(objectsRepresentation);
-#elif PY_MAJOR_VERSION == 3
-#warning "Using PY3 Code"
+        /* Python 3.9 ONLY code - we dismissed Python 2.7 */
         PyObject* str = PyUnicode_AsEncodedString(objectsRepresentation, "utf-8", "~E~");//new reference
         const char* s = PyBytes_AsString(str);
+#if(0)
         Py_DecRef(str);
-#endif
         PyErr_Print();
+#endif
         returnValue = QString(s);
         returnValue = returnValue.mid(1,returnValue.length()-2);
+        Py_DecRef(str);
+        PyErr_Print();
         Py_DecRef(objectsRepresentation);
     }
     else if(QString("int").compare(p)==0)
