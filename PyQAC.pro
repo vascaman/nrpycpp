@@ -2,7 +2,7 @@
     error( "PyQAC Cannot find depspath.pri" )
 }
 
-VERSION = 1.0.2
+VERSION = 1.0.4
 
 QT -= gui
 CONFIG += c++11 console
@@ -46,7 +46,17 @@ SOURCES += \
 
 INCLUDEPATH += $${PYTHON_INCLUDE_PATH}
 LIBS += -L$${PYTHON_LIB_PATH} -lpython$${PYTHON_VERSION}
+message("Linking python lib version: $${PYTHON_VERSION}")
 message("LIBS = $${LIBS}")
+
+contains( PYTHON_VERSION, 3.9 ) {
+    DEFINES *= PY_MAJOR_VERSION=3
+}
+contains( PYTHON_VERSION, 2.7 ) {
+    DEFINES *= PY_MAJOR_VERSION=2
+}
+
+
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
