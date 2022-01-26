@@ -67,12 +67,15 @@ void PyRunner::tearDown()
     m_py_thread->exit();
 }
 
+//TODO - this function probably belongs to atena agent and should be in a derived class (2022-01-25 FL)
 void PyRunner::start()
 {
     qDebug() << "pyrunner::start()";
     asyncCallFunction("start");
 }
 
+
+//TODO - this function probably belongs to atena agent and should be in a derived class (2022-01-25 FL)
 void PyRunner::stop()
 {
     qDebug() << "pyrunner::stop()";
@@ -107,6 +110,8 @@ void PyRunner::closeCallContext(PyGILState_STATE state)
 
 void PyRunner::processCall(PyFunctionCall call)
 {
+     //TODO - I don't get this check, syntax_error is set only in the syncCallFunction
+    // but after the process call is happening, so how can this enter the check? (2022-01-25 FL)
     if(m_syntaxError)
     {
         emit(callDidFinishedSlot(call));
@@ -311,18 +316,18 @@ PyObject * PyRunner::getModuleDict()
     return  m_module_dict;
 }
 
-PyObject *PyRunner::getTupleParams(QStringList params)//borrowed reference
+PyObject *PyRunner::getTupleParams(QStringList params)//borrowed reference (WHICH REF? FL)
 {
     if(params.size()==0) {
         return NULL;
     }
 
-    QString formatString ="(";
+    QString formatString = "(";
     for(int i=0; i<params.size(); i++)
     {
-        formatString +="s";
+        formatString += "s";
     }
-    formatString +=")";
+    formatString += ")";
 
     char * p = new char[formatString.length() + 1];
     QSharedPointer<char> formatChars = QSharedPointer<char>(p);
@@ -343,7 +348,7 @@ PyObject *PyRunner::getTupleParams(QStringList params)//borrowed reference
     else
     {
         args = Py_BuildValue(formatChars.data());
-        qDebug()<<"Problem parsing PYQAC args";
+        qDebug()<<"Problem parsing PYQAC args"; //FIXME we should throw or add an error return code from this call
     }
 
     return args;
