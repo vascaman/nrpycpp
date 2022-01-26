@@ -1,8 +1,14 @@
 #include <QCoreApplication>
-#include "pyrunner.h"
-#include "pyenvironment.h"
 #include <QDebug>
 #include <QStringList>
+#include <QDir>
+
+#include "pyrunner.h"
+#include "pyenvironment.h"
+
+#ifndef WIN32
+#include <unistd.h> //for sleep()
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -11,10 +17,12 @@ int main(int argc, char *argv[])
 
 //    PyEnvironment::getInstance().start();
 
-
+    QString samplespath = QDir::currentPath() + "/../samples/";
+    qDebug() << "Using samples path: " << samplespath;
 //    QString pythonFilePath = "/home/stefano/Projects/pyqac/samples/PyTest.py";
 
-    QString pythonFilePath = "/home/stefano/Projects/pyqac/samples/pyPingTest/PyQAC.py";
+    QString pythonFilePath = samplespath + "PyTest.py";
+
 //    pythonFilePath = "/home/stefano/Projects/pyqac-bundles/PyQACPing/PyQACPing.py";
 //    pythonFilePath = "/home/stefano/Projects/pyqac-bundles/PyQACPing/test%1/mytest.py";
 
@@ -30,13 +38,13 @@ int main(int argc, char *argv[])
     params.append("param_4");
 
     //qDebug()<<"start iteration "<<i;
-PyEnvironment::getInstance().start();
-    for (int i=0; i<1;i++)
+    PyEnvironment::getInstance().start();
+    for (int i=0; i<1; i++)
     {
-        qDebug()<<pythonFilePath;
+        qDebug() << pythonFilePath;
         PyRunner * w = PyEnvironment::getInstance().getInstanceModule(pythonFilePath, dependencies);
 //        w->syncCallFunction("printCose", QStringList("cose"));
-        qDebug()<<"test result:"<<w->syncCallFunction("printCose", QStringList("cose"));
+        qDebug() << "test result:" << w->syncCallFunction("printCose", QStringList("cose"));
         w->syncCallFunction("init", QStringList());
         w->setParam("param_0", "8.8.8.8");
         w->start();
@@ -46,10 +54,10 @@ PyEnvironment::getInstance().start();
         qDebug()<<"test result:"<<w->getResult("result_0").toUtf8().data();
 
         w->syncCallFunction("deinit", QStringList());
-        qDebug()<<"checkError:"<<w->checkError();
-        qDebug()<<"errorcode:"<<w->getErrorCode();
-        qDebug()<<"errorString:"<<w->getErrorString();
-        qDebug()<<"errorMessage:"<<w->getErrorMessage();
+        //qDebug() << "checkError:"   << w->checkError();
+        qDebug() << "errorcode:"    << w->getErrorCode();
+        qDebug() << "errorString:"  << w->getErrorString();
+        qDebug() << "errorMessage:" << w->getErrorMessage();
         delete (w);
 
 //        PyEnvironment::getInstance().stop();
@@ -57,7 +65,7 @@ PyEnvironment::getInstance().start();
     sleep(2);
 
     PyEnvironment::getInstance().stop();
-    qDebug()<<"finished";
+    qDebug() << "finished";
 
 //    Py_Finalize();
 
