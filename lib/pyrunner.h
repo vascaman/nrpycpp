@@ -17,7 +17,7 @@
 #include <Python.h>
 #pragma pop_macro("slots")
 
-struct PyQACCall
+struct PyFunctionCall
 {
     QUuid CallID;
     QString functionName;
@@ -28,7 +28,7 @@ struct PyQACCall
     QString errorMessage;
 };
 
-Q_DECLARE_METATYPE(PyQACCall)
+Q_DECLARE_METATYPE(PyFunctionCall)
 
 enum  PyRunnerError
 {
@@ -47,14 +47,14 @@ class   PyRunner : public QObject
     QString m_scriptFilePath;
     QThread * m_py_thread;
     QStringList params;
-    void processCall(PyQACCall call);
+    void processCall(PyFunctionCall call);
 
     QStringList m_params;
-    QMap<QUuid, PyQACCall> m_calls;
+    QMap<QUuid, PyFunctionCall> m_calls;
     QMutex m_callsMutex;
-    void trackCall(PyQACCall call);
-    PyQACCall getCall(QUuid callID);
-    void untrackCall(PyQACCall call);
+    void trackCall(PyFunctionCall call);
+    PyFunctionCall getCall(QUuid callID);
+    void untrackCall(PyFunctionCall call);
     bool checkCall(QUuid callID);
 
     void loadCurrentModule();
@@ -117,14 +117,14 @@ private:
 signals:
     void setupSignal();
     void tearDownSignal();
-    void startCallSignal(PyQACCall call);
-    void callDidFinishedSignal(PyQACCall call);
+    void startCallSignal(PyFunctionCall call);
+    void callDidFinishedSignal(PyFunctionCall call);
 
 private slots:
     void setup();
     void tearDown();
-    void startCallSlot(PyQACCall call);
-    void callDidFinishedSlot(PyQACCall call);
+    void startCallSlot(PyFunctionCall call);
+    void callDidFinishedSlot(PyFunctionCall call);
 };
 
 #endif // PYRUNNER_H

@@ -21,7 +21,7 @@ PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
     m_sourceFilePy = scriptPath;
     m_dependecies = dependecies;
     m_module_dict = NULL;
-    qRegisterMetaType<PyQACCall>("PyQACCall");
+    qRegisterMetaType<PyFunctionCall>("PyFunctionCall");
 
     m_py_thread = new QThread();
     m_py_thread->setObjectName("PyQAC-"+QFileInfo(scriptPath).completeBaseName()+QUuid::createUuid().toString());
@@ -107,7 +107,7 @@ void PyRunner::closeCallContext(PyGILState_STATE state)
     //PyEval_ReleaseLock();
 }
 
-void PyRunner::processCall(PyQACCall call)
+void PyRunner::processCall(PyFunctionCall call)
 {
     if(m_syntaxError)
     {
@@ -230,7 +230,7 @@ void PyRunner::setParam(QString paramName, QString paramValue)
     syncCallFunction(functionName, params);
 }
 
-void PyRunner::trackCall(PyQACCall call)
+void PyRunner::trackCall(PyFunctionCall call)
 {
     m_callsMutex.lock();
     m_calls.insert(call.CallID, call);
@@ -240,21 +240,21 @@ void PyRunner::trackCall(PyQACCall call)
 
 void PyRunner::printCalls()
 {
-    foreach(PyQACCall call, m_calls.values())
+    foreach(PyFunctionCall call, m_calls.values())
     {
         qDebug()<< "Call Id: "<<call.CallID<<"; name: "<<call.functionName;
     }
 }
 
-PyQACCall PyRunner::getCall(QUuid callID)
+PyFunctionCall PyRunner::getCall(QUuid callID)
 {
     m_callsMutex.lock();
-    PyQACCall returnValue = m_calls.value(callID);
+    PyFunctionCall returnValue = m_calls.value(callID);
     m_callsMutex.unlock();
     return returnValue;
 }
 
-void PyRunner::untrackCall(PyQACCall call)
+void PyRunner::untrackCall(PyFunctionCall call)
 {
     m_callsMutex.lock();
     m_calls.remove(call.CallID);
@@ -495,7 +495,7 @@ void PyRunner::getReturnValues()
 
 QString PyRunner::syncCallFunction(QString functionName, QStringList params = QStringList())
 {
-    PyQACCall call;
+    PyFunctionCall call;
     call.CallID = QUuid::createUuid();
     call.synch = true;
     call.functionName = functionName;
@@ -561,7 +561,7 @@ void PyRunner::checkError()
 
 void PyRunner::asyncCallFunction(QString functionName, QStringList params)
 {
-    PyQACCall call;
+    PyFunctionCall call;
     call.CallID = QUuid::createUuid();
     call.synch = false;
     call.functionName = functionName;
@@ -572,7 +572,7 @@ void PyRunner::asyncCallFunction(QString functionName, QStringList params)
     emit(startCallSignal(call));
 }
 
-void PyRunner::startCallSlot(PyQACCall call)
+void PyRunner::startCallSlot(PyFunctionCall call)
 {
     try {
         processCall(call);
@@ -583,7 +583,7 @@ void PyRunner::startCallSlot(PyQACCall call)
 
 }
 
-void PyRunner::callDidFinishedSlot(PyQACCall call)
+void PyRunner::callDidFinishedSlot(PyFunctionCall call)
 {
     if(call.synch)
     {
