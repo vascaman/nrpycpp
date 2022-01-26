@@ -37,11 +37,11 @@ enum  PyRunnerError
     PyRunnerError_SEMANTIC_ERROR = 3002
 };
 
-class   PyRunner : public QObject
+class PyRunner : public QObject
 {
     Q_OBJECT
 
-    QStringList m_dependecies;
+    QStringList m_dependencies;
     QString m_sourceFilePy;
     QString m_scriptFileName;
     QString m_scriptFilePath;
@@ -83,7 +83,7 @@ class   PyRunner : public QObject
     QString m_errorMessage;
 
 public:
-    PyRunner(QString scriptPath, QStringList dependecies=QStringList());
+    PyRunner(QString scriptPath, QStringList dependencies=QStringList());
     ~PyRunner();
 
     //START_WRAPPER_METHODS
@@ -101,8 +101,8 @@ public:
     void getReturnValues();
 
     //calling custom functions
-    void asyncCallFunction(QString functionName, QStringList params);
-    QString syncCallFunction(QString functionName, QStringList params);
+    void asyncCallFunction(QString functionName, QStringList params = QStringList());
+    QString syncCallFunction(QString functionName, QStringList params = QStringList());
 
     //checking for errors
     int getErrorCode();

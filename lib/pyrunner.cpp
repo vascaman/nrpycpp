@@ -19,7 +19,7 @@ PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
     m_errorCode = PyRunnerError_OK;
     m_syntaxError = false;
     m_sourceFilePy = scriptPath;
-    m_dependecies = dependecies;
+    m_dependencies = dependecies;
     m_module_dict = NULL;
     qRegisterMetaType<PyFunctionCall>("PyFunctionCall");
 
@@ -71,14 +71,13 @@ void PyRunner::tearDown()
 void PyRunner::start()
 {
     qDebug() << "pyrunner::start()";
-
-    asyncCallFunction("start", QStringList());
+    asyncCallFunction("start");
 }
 
 void PyRunner::stop()
 {
     qDebug() << "pyrunner::stop()";
-    syncCallFunction("stop", QStringList());
+    syncCallFunction("stop");
 }
 
 QString PyRunner::getResult(QString resultName)
@@ -452,7 +451,7 @@ void PyRunner::loadCurrentModule()
     PyList_Append( sys_path, folder_path );
 
     //add dependecies path to python search path
-    foreach (QString dependecy, m_dependecies)
+    foreach (QString dependecy, m_dependencies)
     {
         PyObject* dependency_path = PyUnicode_FromString(dependecy.toUtf8().data());//new reference
         PyList_Append( sys_path, dependency_path);
@@ -478,7 +477,7 @@ void PyRunner::unloadCurrentModule()
     PyRun_SimpleString(unloadPathCommand.toUtf8().data());
     PyRun_SimpleString(unloadModuleCommand.toUtf8().data());
 
-    foreach (QString dependency, m_dependecies)
+    foreach (QString dependency, m_dependencies)
     {
         unloadPathCommand = "sys.path.remove(\""+dependency+"\")";
         PyRun_SimpleString(unloadPathCommand.toUtf8().data());
@@ -493,7 +492,7 @@ void PyRunner::getReturnValues()
 
 }
 
-QString PyRunner::syncCallFunction(QString functionName, QStringList params = QStringList())
+QString PyRunner::syncCallFunction(QString functionName, QStringList params)
 {
     PyFunctionCall call;
     call.CallID = QUuid::createUuid();
@@ -550,10 +549,10 @@ QString PyRunner::getErrorMessage()
 void PyRunner::checkError()
 {
     if(!m_syntaxError)
-        m_errorCode = syncCallFunction("getErrorCode", QStringList()).toInt();
+        m_errorCode = syncCallFunction("getErrorCode").toInt();
 
     if(!m_syntaxError)
-        m_errorMessage = syncCallFunction("getErrorMsg", QStringList());
+        m_errorMessage = syncCallFunction("getErrorMsg");
 
     if(m_errorCode!=0 && !m_syntaxError)
         m_errorString = m_scriptFileName+" reported error";
