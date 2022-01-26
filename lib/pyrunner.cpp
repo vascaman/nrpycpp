@@ -27,19 +27,11 @@ PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
     m_py_thread->setObjectName("PyQAC-"+QFileInfo(scriptPath).completeBaseName()+QUuid::createUuid().toString());
     m_py_thread->start();
 
-    bool b;
-    b = connect(m_py_thread, SIGNAL(finished()),
-               m_py_thread, SLOT(deleteLater()));
-    assert(b);
-    b = connect(this, SIGNAL(startCallSignal(PyQACCall)),
-                this, SLOT(startCallSlot(PyQACCall)));
-    assert(b);
-    b = connect(this, SIGNAL(setupSignal()),
-                this, SLOT(setup()));
-    assert(b);
-    b = connect(this, SIGNAL(tearDownSignal()),
-                this, SLOT(tearDown()));
-    assert(b);
+    connect(m_py_thread, &QThread::finished, m_py_thread, &QThread::deleteLater);
+
+    connect(this, &PyRunner::startCallSignal, this, &PyRunner::startCallSlot);
+    connect(this, &PyRunner::setupSignal, this, &PyRunner::setup);
+    connect(this, &PyRunner::tearDownSignal, this, &PyRunner::tearDown);
 
     this->moveToThread(m_py_thread);
     emit(setupSignal());
