@@ -56,7 +56,10 @@
         "    //CONNECT_PLACEHOLDER",
         "\n}\n",
         "PyRunnerQt::~PyRunnerQt()",
-        "{\n    delete m_pPyRunner;\n}\n\n"
+        "{",
+        "    delete m_pPyRunner;",
+        "    PyEnvironment::getInstance().stop(); //FIXME we should add runner usages",
+        "}\n\n"
       ],
       "impl_class_stop": []
     },
