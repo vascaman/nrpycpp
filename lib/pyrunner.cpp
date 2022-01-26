@@ -114,7 +114,7 @@ void PyRunner::processCall(PyFunctionCall call)
     // but after the process call is happening, so how can this enter the check? (2022-01-25 FL)
     if(m_syntaxError)
     {
-        emit(callDidFinishedSlot(call));
+        emit(callDidFinishedSlot(call)); //FIXME - this is NOT a signal (2022-01-25 FL)
         return;
     }
 
@@ -166,8 +166,10 @@ void PyRunner::processCall(PyFunctionCall call)
             //FIXME - shouldn't we return here? (2022-01-26 FL)
         }
 
-
-        PyObject * py_args = getTupleParams(call.params);//borrowed reference
+        QVariantList vl;
+        foreach (QString s, call.params)
+            vl << s;
+        PyObject * py_args = getTupleParams(vl);//borrowed reference
 
         PyObject * py_ret = NULL;
 
@@ -194,7 +196,7 @@ void PyRunner::processCall(PyFunctionCall call)
             Py_DecRef(py_args);
 
         closeCallContext(gstate);
-        emit(callDidFinishedSlot(call));
+        emit(callDidFinishedSlot(call)); //FIXME - this is NOT a signal (2022-01-25 FL)
     } catch (...)
     {
         //qDebug() << e.what();
@@ -247,7 +249,7 @@ void PyRunner::trackCall(PyFunctionCall call)
 
 void PyRunner::printCalls()
 {
-    //FIXME - we're accessing m_calss without mutex (2022-01-26 FL)
+    //FIXME - we're accessing m_calls without mutex (2022-01-26 FL)
     foreach(PyFunctionCall call, m_calls.values())
     {
         qDebug()<< "Call Id: "<<call.CallID<<"; name: "<<call.functionName;
@@ -316,34 +318,90 @@ PyObject * PyRunner::getModuleDict()
     return  m_module_dict;
 }
 
-PyObject *PyRunner::getTupleParams(QStringList params)//borrowed reference (WHICH REF? FL)
+
+QString getPythonParamTypeString(QVariant v)
+{
+    QString rettype; //empty is invalid string
+    if (v.type() == QVariant::String) {
+        return "s";
+    } else if (v.type() == QVariant::Int || v.type() == QVariant::UInt
+                || v.type() == QVariant::LongLong || v.type() == QVariant::ULongLong) {
+        return "l";
+    }
+
+    return rettype;
+}
+
+#include <iostream>
+template <typename T>
+void func(T t)
+{
+    std::cout << t << std::endl ;
+}
+template<typename T, typename... Args>
+void func(T t, Args... args) // recursive variadic function
+{
+    std::cout << t <<std::endl ;
+
+    func(args...) ;
+}
+
+template<typename... Args>
+PyObject* generatePyObjectArgs(const char *format, Args... args) // recursive variadic function
+{
+    PyObject *pArgs = Py_BuildValue(format, std::forward<Args>(args)...);
+    return pArgs;
+}
+
+PyObject* generatePyObjectPtrFromArg(QVariant v) // recursive variadic function
+{
+    QString rettype; //empty is invalid string
+    if (v.type() == QVariant::String) {
+        return Py_BuildValue("s", v.toString().constData());
+    } else if (v.type() == QVariant::Int || v.type() == QVariant::UInt
+                || v.type() == QVariant::LongLong || v.type() == QVariant::ULongLong) {
+        return Py_BuildValue("l", v.toLongLong());
+    }
+    return nullptr;
+}
+
+
+PyObject *PyRunner::getTupleParams(QVariantList params)//borrowed reference (WHICH REF? FL)
 {
     if(params.size()==0) {
         return NULL;
     }
 
     QString formatString = "(";
-    for(int i=0; i<params.size(); i++)
+    foreach (QVariant v, params)
     {
-        formatString += "s";
+        QString pyvartype = getPythonParamTypeString(v);
+        formatString += pyvartype;
     }
     formatString += ")";
 
     char * p = new char[formatString.length() + 1];
-    QSharedPointer<char> formatChars = QSharedPointer<char>(p);
+    QSharedPointer<char> formatChars = QSharedPointer<char>(p); //FIXME - why the shared pointer? it is not used anywhere
     strcpy(formatChars.data(), formatString.toUtf8().constData());
 
     PyErr_Print();//if you remove this, python >3 stops working
 
     PyObject * args;
 
-    if(params.count()==1)
+    PyObject *tup = PyTuple_New(params.size());
+    for (int i = 0; i < params.size(); i++) {
+        // Note that PyTuple_SET_ITEM steals the reference we get from PyLong_FromLong.
+        PyTuple_SET_ITEM(tup, i, PyUnicode_FromString(params[i].toString().toStdString().c_str()));
+    }
+    return tup;
+
+    /*if(params.count()==1)
     {
-        args = Py_BuildValue(formatChars.data(), qPrintable(params[0]));//new reference
+        args = Py_BuildValue(formatChars.data(), qPrintable(params[0].toString()));//new reference
     }
     else if(params.count()==2)
     {
-        args = Py_BuildValue(formatChars.data(), qPrintable(params[0]), qPrintable(params[1]));//new reference
+        args = Py_BuildValue(formatChars.data(), qPrintable(params[0].toString()), qPrintable(params[1].toString()));//new reference
     }
     else
     {
@@ -351,7 +409,8 @@ PyObject *PyRunner::getTupleParams(QStringList params)//borrowed reference (WHIC
         qDebug()<<"Problem parsing PYQAC args"; //FIXME we should throw or add an error return code from this call
     }
 
-    return args;
+
+    return args;*/
 }
 
 void PyRunner::printPyDict(PyObject *dict)

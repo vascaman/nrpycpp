@@ -68,7 +68,7 @@ class PyRunner : public QObject
     void closeCallContext(PyGILState_STATE state);
 
     QString parseObject(PyObject * object);
-    PyObject * getTupleParams(QStringList params);
+    PyObject * getTupleParams(QVariantList paramList);
 
     /*debug utils*/
     void printPyTuple(PyObject* tuple);

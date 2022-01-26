@@ -16,12 +16,8 @@ int main(int argc, char *argv[])
 
     QString samplespath = QDir::currentPath() + "/../samples/";
     qDebug() << "Using samples path: " << samplespath;
-//    QString pythonFilePath = "/home/stefano/Projects/pyqac/samples/PyTest.py";
 
     QString pythonFilePath = samplespath + "PyTest.py";
-
-//    pythonFilePath = "/home/stefano/Projects/pyqac-bundles/PyQACPing/PyQACPing.py";
-//    pythonFilePath = "/home/stefano/Projects/pyqac-bundles/PyQACPing/test%1/mytest.py";
 
     QStringList dependencies;
 //    dependencies.append("/home/aru/Projects/PyQAC/Dependency/");
@@ -39,33 +35,41 @@ int main(int argc, char *argv[])
     for (int i=0; i<1; i++)
     {
         qDebug() << pythonFilePath;
-        //PyRunner * w = PyEnvironment::getInstance().getInstanceModule(pythonFilePath, dependencies);
         PyRunnerQt * w = new PyRunnerQt(pythonFilePath, dependencies);
-//        w->syncCallFunction("printCose", QStringList("cose"));
-        qDebug() << "test result:" << w->syncCallFunction("printCose", QStringList("cose"));
-        w->syncCallFunction("init", QStringList());
+
+        QString myparm = "ciccio";
+        qDebug() << "Calling upper with param: " << myparm;
+        qDebug() << "test result:" << w->syncCallFunction("upper", QStringList(myparm));
+
+        QStringList twoparms;
+        twoparms << "foo" << "bar";
+        qDebug() << "Calling swapp with params: " << twoparms;
+        qDebug() << "swapp result:" << w->syncCallFunction("swapp", twoparms);
+
+
+        QStringList threeparms;
+        threeparms << "foo" << "bar" << "zoidberg";
+        qDebug() << "Calling shiftR3 with params: " << threeparms;
+        qDebug() << "swapp result:" << w->syncCallFunction("shiftR3", threeparms);
+        /* maybe needed for iQAC test(?)
         w->setParam("param_0", "8.8.8.8");
         w->start();
         sleep(5);
         w->stop();
-
         qDebug()<<"test result:"<<w->getResult("result_0").toUtf8().data();
+        */
 
-        w->syncCallFunction("deinit", QStringList());
+        //w->syncCallFunction("deinit", QStringList());
         //qDebug() << "checkError:"   << w->checkError();
         qDebug() << "errorcode:"    << w->getErrorCode();
         qDebug() << "errorString:"  << w->getErrorString();
         qDebug() << "errorMessage:" << w->getErrorMessage();
         delete (w);
-
-//        PyEnvironment::getInstance().stop();
     }
     sleep(2);
 
     //PyEnvironment::getInstance().stop();
     qDebug() << "finished";
-
-//    Py_Finalize();
 
     return a.exec();
 }
