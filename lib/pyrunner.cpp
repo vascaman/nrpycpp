@@ -1,7 +1,7 @@
 #include "pyrunner.h"
 #include <QDebug>
 #include <QSharedPointer>
-
+#include <QVariant>
 
 
 PyRunner::~PyRunner()
@@ -82,12 +82,13 @@ void PyRunner::stop()
     syncCallFunction("stop");
 }
 
+//TODO - this function probably belongs to atena agent and should be in a derived class (2022-01-25 FL)
 QString PyRunner::getResult(QString resultName)
 {
     qDebug() << "pyrunner::getResult()";
     QString functionName = "getResult";
 
-    QStringList params;
+    QVariantList params;
     params.append(resultName);
     QString result = syncCallFunction(functionName, params);
     qDebug() << QString("result for '%1' is %2").arg(resultName).arg(result);
@@ -167,9 +168,9 @@ void PyRunner::processCall(PyFunctionCall call)
         }
 
         QVariantList vl;
-        foreach (QString s, call.params)
-            vl << s;
-        PyObject * py_args = getTupleParams(vl);//borrowed reference
+        //foreach (QString s, call.params)
+        //    vl << s;
+        PyObject * py_args = getTupleParams(call.params);//borrowed reference
 
         PyObject * py_ret = NULL;
 
@@ -204,11 +205,14 @@ void PyRunner::processCall(PyFunctionCall call)
     }
 }
 
+
+//this is specific to atena i believe
 QStringList PyRunner::getParams() const
 {
     return m_params;
 }
 
+//this is specific to atena i believe
 void PyRunner::setParams(const QStringList &params)
 {
     m_params = params;
@@ -225,10 +229,15 @@ void PyRunner::setParams(const QStringList &params)
     stringParams += "]";
 
     //qDebug()<<stringParams;
+    QVariantList paramsvl;
+    foreach (QString s, params)
+        paramsvl << s;
 
-    syncCallFunction("setParams", params);
+    syncCallFunction("setParams", paramsvl);
 }
 
+
+//this is specific to atena i believe
 void PyRunner::setParam(QString paramName, QString paramValue)
 {
     QString functionName = "setParam";
@@ -236,7 +245,11 @@ void PyRunner::setParam(QString paramName, QString paramValue)
     QStringList params;
     params.append(paramName);
     params.append(paramValue);
-    syncCallFunction(functionName, params);
+
+    QVariantList paramsvl;
+    foreach (QString s, params)
+        paramsvl << s;
+    syncCallFunction(functionName, paramsvl);
 }
 
 void PyRunner::trackCall(PyFunctionCall call)
@@ -390,8 +403,18 @@ PyObject *PyRunner::getTupleParams(QVariantList params)//borrowed reference (WHI
 
     PyObject *tup = PyTuple_New(params.size());
     for (int i = 0; i < params.size(); i++) {
+        if (params[i].type() == QVariant::String) {
+            PyTuple_SET_ITEM(tup, i, PyUnicode_FromString(params[i].toString().toStdString().c_str()));
+        } else if (params[i].type() == QVariant::Int || params[i].type() == QVariant::LongLong) {
+           PyTuple_SET_ITEM(tup, i, PyLong_FromLong(params[i].toLongLong()));
+        } else if (params[i].type() == QVariant::UInt || params[i].type() == QVariant::ULongLong) {
+            PyTuple_SET_ITEM(tup, i, PyLong_FromLong(params[i].toULongLong()));
+        } else if (params[i].type() == QVariant::Double) {
+            PyTuple_SET_ITEM(tup, i, PyFloat_FromDouble(params[i].toDouble()));
+        } else if (params[i].type() == QVariant::Bool) {
+            PyTuple_SET_ITEM(tup, i, PyBool_FromLong(params[i].toInt())); //FIXME - this conversion is flaky
+        }
         // Note that PyTuple_SET_ITEM steals the reference we get from PyLong_FromLong.
-        PyTuple_SET_ITEM(tup, i, PyUnicode_FromString(params[i].toString().toStdString().c_str()));
     }
     return tup;
 
@@ -555,12 +578,14 @@ void PyRunner::unloadCurrentModule()
 //    PyEval_ReleaseLock();
 }
 
+
+//this is specific to atena i believe
 void PyRunner::getReturnValues()
 {
 
 }
 
-QString PyRunner::syncCallFunction(QString functionName, QStringList params)
+QString PyRunner::syncCallFunction(QString functionName, QVariantList params)
 {
     PyFunctionCall call;
     call.CallID = QUuid::createUuid();
@@ -632,7 +657,10 @@ void PyRunner::asyncCallFunction(QString functionName, QStringList params)
     call.CallID = QUuid::createUuid();
     call.synch = false;
     call.functionName = functionName;
-    call.params = params;
+    QVariantList paramsvl;
+    foreach (QString s, params)
+        paramsvl << s;
+    call.params = paramsvl;
     call.error = false;
 
     this->moveToThread(m_py_thread);

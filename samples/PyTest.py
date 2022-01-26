@@ -35,3 +35,12 @@ def swapp(a, b):
 
 def shiftR3(a, b, c):
     return str(c) + " " + str(a) + " " + str(b)
+
+
+def sum(a,b):
+    return a+b
+
+
+def negate(a):
+    return not a
+

@@ -6,7 +6,8 @@
 #include <QMutex>
 #include <QUuid>
 #include <QMap>
-
+#include <QVariantList>
+#include <QVariant>
 #include <QDebug>
 #include <QFile>
 #include <QDir>
@@ -23,7 +24,7 @@ struct PyFunctionCall
     QString functionName;
     bool synch;
     QString returnValue;
-    QStringList params;
+    QVariantList params;
     bool error;
     QString errorMessage;
 };
@@ -102,7 +103,7 @@ public:
 
     //calling custom functions
     void asyncCallFunction(QString functionName, QStringList params = QStringList());
-    QString syncCallFunction(QString functionName, QStringList params = QStringList());
+    QString syncCallFunction(QString functionName, QVariantList params = QVariantList());
 
     //checking for errors
     int getErrorCode();

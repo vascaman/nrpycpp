@@ -38,19 +38,40 @@ int main(int argc, char *argv[])
         PyRunnerQt * w = new PyRunnerQt(pythonFilePath, dependencies);
 
         QString myparm = "ciccio";
+        QVariantList vl;
+        vl << myparm;
         qDebug() << "Calling upper with param: " << myparm;
-        qDebug() << "test result:" << w->syncCallFunction("upper", QStringList(myparm));
+        qDebug() << "test result:" << w->syncCallFunction("upper", vl);
 
-        QStringList twoparms;
+        QVariantList twoparms;
         twoparms << "foo" << "bar";
         qDebug() << "Calling swapp with params: " << twoparms;
         qDebug() << "swapp result:" << w->syncCallFunction("swapp", twoparms);
 
 
-        QStringList threeparms;
+        QVariantList threeparms;
         threeparms << "foo" << "bar" << "zoidberg";
         qDebug() << "Calling shiftR3 with params: " << threeparms;
         qDebug() << "swapp result:" << w->syncCallFunction("shiftR3", threeparms);
+
+        QVariantList threeparmsVariant;
+        threeparmsVariant << 1 << 2 << 3.14;
+        qDebug() << "Calling shiftR3 with params: " << threeparmsVariant;
+        qDebug() << "shiftR3 result:" << w->syncCallFunction("shiftR3", threeparmsVariant);
+
+
+
+        twoparms.clear();
+        twoparms << 1.4 << 41;
+        qDebug() << "Calling sum with params: " << twoparms;
+        qDebug() << "sum result:" << w->syncCallFunction("sum", twoparms);
+
+        twoparms.clear();
+        twoparms << true;
+        qDebug() << "Calling negate with params: " << twoparms;
+        qDebug() << "negate result:" << w->syncCallFunction("negate", twoparms);
+
+
         /* maybe needed for iQAC test(?)
         w->setParam("param_0", "8.8.8.8");
         w->start();
