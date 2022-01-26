@@ -24,7 +24,7 @@ PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
     qRegisterMetaType<PyFunctionCall>("PyFunctionCall");
 
     m_py_thread = new QThread();
-    m_py_thread->setObjectName("PyQAC-"+QFileInfo(scriptPath).completeBaseName()+QUuid::createUuid().toString());
+    m_py_thread->setObjectName("NrPyCpp-" + QFileInfo(scriptPath).completeBaseName() + QUuid::createUuid().toString());
     m_py_thread->start();
 
     connect(m_py_thread, &QThread::finished, m_py_thread, &QThread::deleteLater);
@@ -50,7 +50,6 @@ void PyRunner::setup()
 
         m_scriptFileName = scriptFileInfo.completeBaseName();
         m_scriptFilePath = scriptFileInfo.dir().path();
-
     }
     catch(...)
     {
@@ -120,14 +119,17 @@ void PyRunner::processCall(PyFunctionCall call)
 
         PyObject * py_lib_mod_dict = getModuleDict(); //borrowed reference of global variable
         if ( !py_lib_mod_dict ) {
-            // log error and return
+            //FIXME - log error and return (2022-01-26 FL)
+            qCritical() << "CRITICAL - cannot get Python module dictionary...";
         }
         Py_IncRef(py_lib_mod_dict);
 
         if(!py_lib_mod_dict)
         {
             call.error = true;
-            call.errorMessage.append("PyQAC ERROR: Cannot find module at \""+m_sourceFilePy+"\"!");
+            call.errorMessage.append("PyQAC ERROR: Cannot find module at \"" + m_sourceFilePy+"\"!");
+            //FIXME - should not we return an error? (2022-01-26 FL)
+            qCritical() << "CRITICAL - cannot use Python module dictionary...";
         }
 
         char * p = new char[call.functionName.length() + 1];
@@ -153,9 +155,10 @@ void PyRunner::processCall(PyFunctionCall call)
         }
 
         if(!py_func){
-            call.error=true;
-            call.errorMessage.append("PyQAC ERROR : cannot find function named \""+call.functionName+"\"!");
-            qDebug()<<call.errorMessage;
+            call.error = true;
+            call.errorMessage.append("ERROR: cannot find python function named \"" + call.functionName+"\"!");
+            qDebug() << call.errorMessage;
+            //FIXME - shouldn't we return here? (2022-01-26 FL)
         }
 
 
@@ -173,7 +176,7 @@ void PyRunner::processCall(PyFunctionCall call)
         {
             call.returnValue = parseObject(py_ret);
             Py_DecRef(py_ret);
-        }else {
+        } else {
             call.errorMessage.append("PyQAC ERROR : retrieving result from function named \""+call.functionName+"\"!");
 
         }
@@ -239,6 +242,7 @@ void PyRunner::trackCall(PyFunctionCall call)
 
 void PyRunner::printCalls()
 {
+    //FIXME - we're accessing m_calss without mutex (2022-01-26 FL)
     foreach(PyFunctionCall call, m_calls.values())
     {
         qDebug()<< "Call Id: "<<call.CallID<<"; name: "<<call.functionName;
