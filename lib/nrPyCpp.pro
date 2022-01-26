@@ -45,7 +45,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         pyenvironment.cpp \
-        pyrunner.cpp
+        pyrunner.cpp \
+        PyRunnerQt.cpp
 
 
 INCLUDEPATH += $${PYTHON_INCLUDE_PATH}
@@ -62,7 +63,8 @@ contains( PYTHON_VERSION, 2.7 ) {
 
 HEADERS += \
     pyenvironment.h \
-    pyrunner.h
+    pyrunner.h \
+    PyRunnerQt.h
 
 DISTFILES += \
     PyQAC.py \
@@ -71,8 +73,7 @@ DISTFILES += \
 
 # includes to be packaged
 DIST_INCS += \
-$$PWD/pyrunner.h\
-$$PWD/pyenvironment.h\
+$$PWD/PyRunnerQt.h
 
 CONFIG(debug, debug|release) {
     win32: {

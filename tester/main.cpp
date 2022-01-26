@@ -2,9 +2,9 @@
 #include <QDebug>
 #include <QStringList>
 #include <QDir>
+#include <QVariantList>
 
-#include "pyrunner.h"
-#include "pyenvironment.h"
+#include "PyRunnerQt.h"
 
 #ifndef WIN32
 #include <unistd.h> //for sleep()
@@ -13,9 +13,6 @@
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
-
-
-//    PyEnvironment::getInstance().start();
 
     QString samplespath = QDir::currentPath() + "/../samples/";
     qDebug() << "Using samples path: " << samplespath;
@@ -38,11 +35,12 @@ int main(int argc, char *argv[])
     params.append("param_4");
 
     //qDebug()<<"start iteration "<<i;
-    PyEnvironment::getInstance().start();
+    //PyEnvironment::getInstance().start();
     for (int i=0; i<1; i++)
     {
         qDebug() << pythonFilePath;
-        PyRunner * w = PyEnvironment::getInstance().getInstanceModule(pythonFilePath, dependencies);
+        //PyRunner * w = PyEnvironment::getInstance().getInstanceModule(pythonFilePath, dependencies);
+        PyRunnerQt * w = new PyRunnerQt(pythonFilePath, dependencies);
 //        w->syncCallFunction("printCose", QStringList("cose"));
         qDebug() << "test result:" << w->syncCallFunction("printCose", QStringList("cose"));
         w->syncCallFunction("init", QStringList());
@@ -64,7 +62,7 @@ int main(int argc, char *argv[])
     }
     sleep(2);
 
-    PyEnvironment::getInstance().stop();
+    //PyEnvironment::getInstance().stop();
     qDebug() << "finished";
 
 //    Py_Finalize();

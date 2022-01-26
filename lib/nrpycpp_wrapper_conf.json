@@ -1,0 +1,67 @@
+{
+  "parser": {
+    "header_file_to_parse": "pyrunner.h",
+    "internal_object_class": "PyRunner",
+    "enum_types": ["LineOnHoldStatusType","DtmfDeliveryModeType", "AudioDeviceType", "VoicemailMessageStatusType", "PbxService::PbxServiceType"],
+    "int_types": ["kpeLineId_t", "kpeDeviceId_t"],
+    "special_types": []
+  },
+  "exporter": {
+    "namespace": "NrPyCpp",
+    "cpp_qt": {
+      "generated_wrapper": "PyRunnerQt",
+      "internal_pointer_var": "m_pPyRunner",
+      "header_class_start": [
+        "\n#ifndef PYRUNNER_QT_INCS",
+        "#define PYRUNNER_QT_INCS",
+        "\n//#include \"NrPyCppTypes.h\"",
+        "#include <QStringList>",
+        "#include <QObject>",
+        "\n//using namespace NrPyCpp;",
+        "\nclass PyRunner;",
+        "\n#ifdef WIN32",
+        " #ifdef NRPYQT_LIB_EXPORTS",
+        "   #define NRPYQT_LIB_API __declspec(dllexport)",
+        " #else",
+        "   #define NRPYQT_LIB_API __declspec(dllimport)",
+        " #endif",
+        "#else",
+        " #define NRPYQT_LIB_API",
+        "#endif",
+        "\nclass NRPYQT_LIB_API PyRunnerQt: public QObject",
+        "{",
+        "    Q_OBJECT",
+        "\n    /* Private Members*/",
+        "    PyRunner *m_pPyRunner;",
+        "\npublic:",
+        "    PyRunnerQt(QString pythonscript, QStringList dependencies);",
+        "    ~PyRunnerQt();\n\n"
+      ],
+      "header_class_stop": [
+        "\n};",
+        "\n#endif\n"
+      ],
+      "impl_class_start": [
+        "\n#include \"pyrunner.h\"",
+        "#include \"PyRunnerQt.h\"",
+        "#include \"pyenvironment.h\"",
+        "\n/*!",
+        "    \\class PyRunnerQt",
+        "    \\brief This class allows to run a python script from Qt class",
+            "*/",
+        "PyRunnerQt::PyRunnerQt(QString pythonscript, QStringList dependencies)",
+        "{",
+        "    PyEnvironment::getInstance().start();",
+        "    m_pPyRunner = new PyRunner(pythonscript, dependencies);",
+        "    //CONNECT_PLACEHOLDER",
+        "\n}\n",
+        "PyRunnerQt::~PyRunnerQt()",
+        "{\n    delete m_pPyRunner;\n}\n\n"
+      ],
+      "impl_class_stop": []
+    },
+    "cpp_noqt": {
+      "generated_wrapper": "nrPyCpp"
+    }
+  }
+}

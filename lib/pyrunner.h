@@ -37,7 +37,7 @@ enum  PyRunnerError
     PyRunnerError_SEMANTIC_ERROR = 3002
 };
 
-class PyRunner : public QObject
+class   PyRunner : public QObject
 {
     Q_OBJECT
 
@@ -69,10 +69,10 @@ class PyRunner : public QObject
 
     QString parseObject(PyObject * object);
     PyObject * getTupleParams(QStringList params);
+
     /*debug utils*/
     void printPyTuple(PyObject* tuple);
     void printCalls();
-
     void printPyList(PyObject *list);
     void printPyDict(PyObject *list);
 
@@ -86,6 +86,7 @@ public:
     PyRunner(QString scriptPath, QStringList dependecies=QStringList());
     ~PyRunner();
 
+    //START_WRAPPER_METHODS
     //changing status
     void start();
     void stop();
@@ -109,7 +110,7 @@ public:
     QString getErrorMessage();
 
     void checkError();
-
+    //END_WRAPPER_METHODS
 private:
 
 
