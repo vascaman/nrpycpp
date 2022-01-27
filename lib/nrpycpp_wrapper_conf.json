@@ -16,6 +16,7 @@
         "#define PYRUNNER_QT_INCS",
         "\n//#include \"NrPyCppTypes.h\"",
         "#include <QStringList>",
+        "#include <QVariantList>",
         "#include <QObject>",
         "\n//using namespace NrPyCpp;",
         "\nclass PyRunner;",
