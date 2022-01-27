@@ -1,0 +1,23 @@
+#define the following variables
+#PYTHON_LIB_PATH = path/to/python/libs
+#PYTHON_INCLUDE_PATH = path/to/python/includes
+#PYTHON_VERSION = the version of python used (for mac we need python3)
+
+#linux usual defaults
+linux {
+PYTHON_VERSION=3.10
+PYTHON_LIB_PATH     = /usr/lib/python$${PYTHON_VERSION}
+PYTHON_INCLUDE_PATH = /usr/include/python$${PYTHON_VERSION}
+}
+
+macos {
+PYTHON_VERSION=3.8
+PYTHON_LIB_PATH     = /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/$${PYTHON_VERSION}/lib/
+PYTHON_INCLUDE_PATH = /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/$${PYTHON_VERSION}/Headers/
+}
+
+win32 {
+PYTHON_VERSION = 2.7
+PYTHON_LIB_PATH     = C:\Python27-x86\libs
+PYTHON_INCLUDE_PATH = C:\Python27-x86\include
+}
