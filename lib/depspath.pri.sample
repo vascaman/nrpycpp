@@ -1,11 +1,16 @@
 #define the following variables
 #PYTHON_LIB_PATH = path/to/python/libs
 #PYTHON_INCLUDE_PATH = path/to/python/includes
-#
-# on armv7l the default lib path is: /usr/lib/arm-linux-gnueabihf
-# on armv7l the default include path is: /usr/include/python2.7
+#PYTHON_VERSION = the version of python used (for mac we need python3)
 
 #linux usual defaults
-PYTHON_VERSION=3.10
-PYTHON_LIB_PATH     = /usr/lib/python$${PYTHON_VERSION}
-PYTHON_INCLUDE_PATH = /usr/include/python$${PYTHON_VERSION}
+#PYTHON_VERSION=3.10
+#PYTHON_LIB_PATH     = /usr/lib/python$${PYTHON_VERSION}
+#PYTHON_INCLUDE_PATH = /usr/include/python$${PYTHON_VERSION}
+
+#xcode usual defaults (the 2.7 distributed on every mac as runtime lacks build libraries)
+#PYTHON_VERSION=3.8
+#PYTHON_LIB_PATH     = /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/$${PYTHON_VERSION}/lib/
+#PYTHON_INCLUDE_PATH = /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/$${PYTHON_VERSION}/Headers/
+
+#Windows does not have a python default

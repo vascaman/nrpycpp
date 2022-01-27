@@ -13,5 +13,4 @@ CONFIG(debug, debug|release) {
     macos: LIBSUFFIX = "_debug"
     linux: LIBSUFFIX = "_d"
 }
-
 LIBS += -lnrPyCpp$${LIBSUFFIX}

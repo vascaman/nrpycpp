@@ -8,27 +8,16 @@ VERSION = 1.0.4
 }
 
 QT -= gui
-CONFIG += c++11 console
+CONFIG += c++11 debug_and_release
 CONFIG -= app_bundle
-CONFIG += debug_and_release
 
 TEMPLATE = lib
 win32{
     CONFIG -= dll
-    CONFIG += shared static
+    CONFIG += console
 }
 
-#OUTPUT_DIR = $${QMAKE_CXX}_qt-$${QT_VERSION}
-
-#CONFIG(release, debug|release){
-#    TARGET = release/$$OUTPUT_DIR/$$TARGET
-#    message("nrPyCpp release uses Qt $$QT_VERSION")
-#}
-
-#CONFIG(debug, debug|release){
-#    TARGET = debug/$$OUTPUT_DIR/$$TARGET
-#    message("nrPyCpp debug uses Qt $$QT_VERSION")
-#}
+macos: CONFIG += dll #to build a framework
 
 message("Output dir: $$TARGET")
 
@@ -51,15 +40,9 @@ SOURCES += \
 
 INCLUDEPATH += $${PYTHON_INCLUDE_PATH}
 LIBS += -L$${PYTHON_LIB_PATH} -lpython$${PYTHON_VERSION}
-message("Linking python lib version: $${PYTHON_VERSION}")
+message("nrPyCpp linking python lib version: $${PYTHON_VERSION}")
 message("nrPyCpp LIBS = $${LIBS}")
 
-contains( PYTHON_VERSION, 3.9 ) {
-    DEFINES *= PY_MAJOR_VERSION=3
-}
-contains( PYTHON_VERSION, 2.7 ) {
-    DEFINES *= PY_MAJOR_VERSION=2
-}
 
 HEADERS += \
     pyenvironment.h \
@@ -76,9 +59,7 @@ DIST_INCS += \
 $$PWD/PyRunnerQt.h
 
 CONFIG(debug, debug|release) {
-    win32: {
-        LIBSUFFIX = "d"
-    }
+    win32: LIBSUFFIX = "d"
     macos: LIBSUFFIX = "_debug"
     linux: LIBSUFFIX = "_d"
 }
@@ -123,6 +104,16 @@ TARGET = $$join(TARGET,,bin/,)
 
 # And at last common unix library movements
 INCLUDE_DIR = $$DSTDIR/include
+
+#on mac we need to adjust the libraries id and copy the pythonlib to be distributed
+macos: {
+    PYTHONLIB=libpython$${PYTHON_VERSION}.dylib
+    QMAKE_POST_LINK+="cp $${PYTHON_LIB_PATH}/$${PYTHONLIB} $$DSTDIR $$escape_expand(\\n\\t)"
+    QMAKE_POST_LINK+="install_name_tool -id @rpath/$${PYTHONLIB} $$DSTDIR/$${PYTHONLIB} $$escape_expand(\\n\\t)"
+    QMAKE_POST_LINK+="install_name_tool -change @rpath/Python3.framework/Versions/$${PYTHON_VERSION}/Python3 @rpath/$${PYTHONLIB} $${DLL}.dylib $$escape_expand(\\n\\t)"
+}
+
+
 unix:!ios {
     #QMAKE_POST_LINK+="mkdir -p $$FINALDIR $$escape_expand(\\n\\t)"
     QMAKE_POST_LINK+="mkdir -p $$INCLUDE_DIR $$escape_expand(\\n\\t)"
@@ -141,4 +132,5 @@ win32 {
     for(ext, WINEXT):QMAKE_POST_LINK+="$$QMAKE_COPY $$join(DLL,,,.$${ext}) \"$$DSTDIR\" $$escape_expand(\\n\\t)"
     for(vinc, DIST_INCS):QMAKE_POST_LINK+="$$QMAKE_COPY $$vinc \"$$INCLUDE_DIR\" $$escape_expand(\\n\\t)"
 }
+
 
