@@ -48,7 +48,7 @@ PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
 
     connect(m_py_thread, &QThread::finished, m_py_thread, &QThread::deleteLater);
 
-    connect(this, &PyRunner::startCallSignal, this, &PyRunner::startCallSlot);
+    connect(this, &PyRunner::startCallRequestedSignal, this, &PyRunner::onStartCallRequest);
     //connect(this, &PyRunner::setupSignal, this, &PyRunner::setup);
     connect(this, &PyRunner::tearDownSignal, this, &PyRunner::tearDown);
 
@@ -503,7 +503,7 @@ QVariant PyRunner::syncCallFunction(QString functionName, QVariantList params)
     //The following move to thread makes no sense, we already did that in ctor
     this->moveToThread(m_py_thread);
 
-    emit startCallSignal(call);
+    emit startCallRequestedSignal(call);
 
     while (!checkCall(call.CallID))
     {
@@ -559,10 +559,10 @@ void PyRunner::asyncCallFunction(QString functionName, QStringList params)
     this->moveToThread(m_py_thread);
     qDebug() << "after move to thread";
     PRINT_THREAD_INFO
-    emit(startCallSignal(call));
+    emit(startCallRequestedSignal(call));
 }
 
-void PyRunner::startCallSlot(PyFunctionCall call)
+void PyRunner::onStartCallRequest(PyFunctionCall call)
 {
     PRINT_THREAD_INFO
     try {

@@ -125,12 +125,12 @@ private:
 signals:
     //void setupSignal();
     void tearDownSignal();
-    void startCallSignal(PyFunctionCall call);
-    void callDidFinishedSignal(PyFunctionCall call);
+    void startCallRequestedSignal(PyFunctionCall call);
+    void callCompletedSignal(PyFunctionCall call);
 
 private slots:
     void tearDown();
-    void startCallSlot(PyFunctionCall call);
+    void onStartCallRequest(PyFunctionCall call);
 };
 
 #endif // PYRUNNER_H
