@@ -3,123 +3,114 @@
 #include <QDebug>
 #include <QDir>
 #include <QThread>
+#include <QDateTime>
 
 #include "PyRunnerQt.h"
 #include "../lib/sleep_header.h"
 
-PyCppTester::PyCppTester(QObject *parent)
+PyCppTester::PyCppTester(QString i_pythonscriptfullpath, QObject *parent)
     : QObject{parent}
+    , m_pyscriptPath((i_pythonscriptfullpath))
 {
-
-}
-
-void PyCppTester::execute()
-{
-
-    QString samplespath = QDir::currentPath() + "/../samples/";
-    qDebug() << "Using samples path: " << samplespath;
-
-    QString pythonFilePath = samplespath + "PyTest.py";
 
     QStringList dependencies;
 //    dependencies.append("/home/aru/Projects/PyQAC/Dependency/");
 //    dependencies.append("/home/aru/Projects/PyQAC/Dependency2/");
     //dependencies.append("/home/aru/Projects/PyQAC/PyDependencyImporter/");
 
-    QStringList params;
-    params.append("param_1");
-    params.append("param_2");
-    params.append("param_3");
-    params.append("param_4");
+    qDebug() << "Executing Python script:" << m_pyscriptPath;
+    m_pPyRunner = new PyRunnerQt(m_pyscriptPath, dependencies);
+    connect(m_pPyRunner, &PyRunnerQt::callCompletedSignal, this, &PyCppTester::onCallFinished);
 
+}
+
+
+PyCppTester::~PyCppTester()
+{
+    delete m_pPyRunner;
+}
+
+void PyCppTester::executeTestList()
+{
     qDebug() << "Application thread " << QThread::currentThread();
-    for (int i=0; i<1; i++)
-    {
-        qDebug() << "Executing Python script:" << pythonFilePath;
-        PyRunnerQt * w = new PyRunnerQt(pythonFilePath, dependencies);
 
-        connect(w, &PyRunnerQt::callCompletedSignal, this, &PyCppTester::onCallFinished);
-        QVariantList paramlist;
-        QString funcname;
-
-        QString myparm = "ciccio";
-        funcname = "upper";
-        paramlist << myparm;
-        qDebug() << "Calling " << funcname << " with params: " << paramlist;
-        qDebug() << funcname << " result:" << w->syncCallFunction(funcname, paramlist);
-
-        funcname = "swapp";
-        paramlist.clear();
-        paramlist << "foo" << "bar";
-        qDebug() << "Calling " << funcname << " with params: " << paramlist;
-        qDebug() << funcname << " result:" << w->syncCallFunction(funcname, paramlist);
+    QVariantList paramlist;
+    QString funcname;
 
 
-        funcname = "shiftR3";
-        paramlist.clear();
-        paramlist << "foo" << "bar" << "zoidberg";
-        qDebug() << "Calling " << funcname << " with params: " << paramlist;
-        qDebug() << funcname << " result:" << w->syncCallFunction(funcname, paramlist);
+    funcname = "upper";
+    paramlist << "ciccio";
+    execute(funcname, paramlist);
 
-        funcname = "shiftR3";
-        paramlist.clear();
-        paramlist << 1 << false << 3.14;
-        qDebug() << "Calling shiftR3 with params: " << paramlist;
-        qDebug() << "shiftR3 result:" << w->syncCallFunction("shiftR3", paramlist);
+    funcname = "swapp";
+    paramlist.clear();
+    paramlist << "foo" << "bar";
+    execute(funcname, paramlist);
 
-        funcname = "lengthy_func";
-        paramlist.clear();
-        paramlist << 5;
-        qDebug() << "Calling " << funcname << " with params: " << paramlist;
-        qDebug() << funcname << " result:" << w->syncCallFunction(funcname, paramlist);
+    funcname = "shiftR3";
+    paramlist.clear();
+    paramlist << "foo" << "bar" << "zoidberg";
+    execute(funcname, paramlist);
 
-        funcname = "sum";
-        paramlist.clear();
-        paramlist << 1.4 << 41;
-        qDebug() << "Calling " << funcname << " with params: " << paramlist;
-        qDebug() << funcname << " result:" << w->syncCallFunction(funcname, paramlist);
-
-        funcname = "negate";
-        paramlist.clear();
-        paramlist << true;
-        qDebug() << "Calling " << funcname << " with params: " << paramlist;
-        qDebug() << funcname << " result:" << w->syncCallFunction(funcname, paramlist);
+    funcname = "shiftR3";
+    paramlist.clear();
+    paramlist << 1 << false << 3.14;
+    execute(funcname, paramlist);
 
 
-        paramlist.clear();
-        paramlist << 1;
-        qDebug() << "Calling ASYNC lengthy_func with params: " << paramlist;
-        qDebug() << "lenghty_func result:" << w->asyncCallFunction("lengthy_func", paramlist);
+    funcname = "lengthy_func";
+    paramlist.clear();
+    paramlist << 5;
+    execute(funcname, paramlist, false);
 
+    funcname = "sum";
+    paramlist.clear();
+    paramlist << 1.4 << 41;
+    execute(funcname, paramlist);
 
-        funcname = "countbytes";
-        paramlist.clear();
-        QByteArray ba(1000 ,'a');
-        paramlist << ba;
-        qDebug() << "Calling " << funcname << " with params: " << paramlist;
-        qDebug() << funcname << " result:" << w->syncCallFunction(funcname, paramlist);
+    funcname = "negate";
+    paramlist.clear();
+    paramlist << true;
+    execute(funcname, paramlist);
 
-        funcname = "incbytes";
-        paramlist.clear();
-        QByteArray ba2(1000 ,'a');
-        paramlist << ba2 << 2;
-        qDebug() << "Calling " << funcname << " with params: " << paramlist;
-        qDebug() << funcname << " result:" << w->syncCallFunction(funcname, paramlist);
+    funcname = "lengthy_func";
+    paramlist.clear();
+    paramlist << 2;
+    execute(funcname, paramlist);
 
+    funcname = "countbytes";
+    paramlist.clear();
+    QByteArray ba(1000 ,'a');
+    paramlist << ba;
+    execute(funcname, paramlist);
 
-        qDebug() << "errorcode:"    << w->getErrorCode();
-        qDebug() << "errorString:"  << w->getErrorString();
-        qDebug() << "errorMessage:" << w->getErrorMessage();
-        //delete (w);
-    }
+    funcname = "incbytes";
+    paramlist.clear();
+    QByteArray ba2(1000 ,'a');
+    paramlist << ba2 << 2;
+    execute(funcname, paramlist);
+
     sleep_for_millis(2000);
 
-    //PyEnvironment::getInstance().stop();
     qDebug() << "finished";
 }
 
 
+void PyCppTester::execute(QString func, QVariantList params, bool sync)
+{
+    qDebug() << QDateTime::currentDateTime()<< " - Calling " << func << " with params: " << params;
+    if (sync) {
+        qDebug() << func << " result:" << m_pPyRunner->syncCallFunction(func, params);
+    } else {
+        qDebug() << func << " callID:" << m_pPyRunner->asyncCallFunction(func, params);
+    }
+}
+
+
+
 void PyCppTester::onCallFinished(QString c)
 {
-    qDebug() << Q_FUNC_INFO << c;
+    qDebug() << Q_FUNC_INFO << c << QDateTime::currentDateTime();
 }
+
+
