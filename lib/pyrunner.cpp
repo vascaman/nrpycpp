@@ -6,6 +6,13 @@
 
 #include "sleep_header.h"
 
+#define NRPYQT_DEBUG
+
+#ifdef NRPYQT_DEBUG
+#define PRINT_THREAD_INFO qDebug() << Q_FUNC_INFO << QThread::currentThread();
+#else
+#define PRINT_THREAD_INFO
+#endif
 
 PyRunner::~PyRunner()
 {
@@ -19,6 +26,7 @@ PyRunner::~PyRunner()
 
 PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
 {
+    PRINT_THREAD_INFO
     m_errorCode = PyRunnerError_OK;
     m_syntaxError = false;
     m_sourceFilePy = scriptPath;
@@ -37,11 +45,14 @@ PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
     connect(this, &PyRunner::tearDownSignal, this, &PyRunner::tearDown);
 
     this->moveToThread(m_py_thread);
+    qDebug() << "after move to thread";
+    PRINT_THREAD_INFO
     emit(setupSignal());
 }
 
 void PyRunner::setup()
 {
+    PRINT_THREAD_INFO
     try {
         QFileInfo scriptFileInfo(m_sourceFilePy);
         if(!scriptFileInfo.exists())
@@ -66,6 +77,7 @@ void PyRunner::setup()
 
 void PyRunner::tearDown()
 {
+    PRINT_THREAD_INFO
     unloadCurrentModule();
     m_py_thread->exit();
 }
@@ -114,6 +126,7 @@ void PyRunner::closeCallContext(PyGILState_STATE state)
 
 void PyRunner::processCall(PyFunctionCall call)
 {
+    PRINT_THREAD_INFO
      //TODO - I don't get this check, syntax_error is set only in the syncCallFunction
     // but after the process call is happening, so how can this enter the check? (2022-01-25 FL)
     if(m_syntaxError)
@@ -257,6 +270,7 @@ void PyRunner::setParam(QString paramName, QString paramValue)
 
 void PyRunner::trackCall(PyFunctionCall call)
 {
+    PRINT_THREAD_INFO
     m_callsMutex.lock();
     m_calls.insert(call.CallID, call);
     //printCalls();
@@ -274,6 +288,7 @@ void PyRunner::printCalls()
 
 PyFunctionCall PyRunner::getCall(QUuid callID)
 {
+    PRINT_THREAD_INFO
     m_callsMutex.lock();
     PyFunctionCall returnValue = m_calls.value(callID);
     m_callsMutex.unlock();
@@ -290,6 +305,7 @@ void PyRunner::untrackCall(PyFunctionCall call)
 
 bool PyRunner::checkCall(QUuid callID)
 {
+    PRINT_THREAD_INFO
     m_callsMutex.lock();
     bool returnValue = m_calls.contains(callID);
     m_callsMutex.unlock();
@@ -348,30 +364,9 @@ QString getPythonParamTypeString(QVariant v)
     return rettype;
 }
 
-#include <iostream>
-template <typename T>
-void func(T t)
-{
-    std::cout << t << std::endl ;
-}
-template<typename T, typename... Args>
-void func(T t, Args... args) // recursive variadic function
-{
-    std::cout << t <<std::endl ;
 
-    func(args...) ;
-}
-
-template<typename... Args>
-PyObject* generatePyObjectArgs(const char *format, Args... args) // recursive variadic function
+PyObject* generatePyObjectPtrFromArg(QVariant v)
 {
-    PyObject *pArgs = Py_BuildValue(format, std::forward<Args>(args)...);
-    return pArgs;
-}
-
-PyObject* generatePyObjectPtrFromArg(QVariant v) // recursive variadic function
-{
-    QString rettype; //empty is invalid string
     if (v.type() == QVariant::String) {
         return Py_BuildValue("s", v.toString().constData());
     } else if (v.type() == QVariant::Int || v.type() == QVariant::UInt
@@ -384,6 +379,7 @@ PyObject* generatePyObjectPtrFromArg(QVariant v) // recursive variadic function
 
 PyObject *PyRunner::getTupleParams(QVariantList params)//borrowed reference (WHICH REF? FL)
 {
+    PRINT_THREAD_INFO
     if(params.size()==0) {
         return NULL;
     }
@@ -402,8 +398,6 @@ PyObject *PyRunner::getTupleParams(QVariantList params)//borrowed reference (WHI
 
     PyErr_Print();//if you remove this, python >3 stops working
 
-    PyObject * args;
-
     PyObject *tup = PyTuple_New(params.size());
     for (int i = 0; i < params.size(); i++) {
         if (params[i].type() == QVariant::String) {
@@ -420,23 +414,6 @@ PyObject *PyRunner::getTupleParams(QVariantList params)//borrowed reference (WHI
         // Note that PyTuple_SET_ITEM steals the reference we get from PyLong_FromLong.
     }
     return tup;
-
-    /*if(params.count()==1)
-    {
-        args = Py_BuildValue(formatChars.data(), qPrintable(params[0].toString()));//new reference
-    }
-    else if(params.count()==2)
-    {
-        args = Py_BuildValue(formatChars.data(), qPrintable(params[0].toString()), qPrintable(params[1].toString()));//new reference
-    }
-    else
-    {
-        args = Py_BuildValue(formatChars.data());
-        qDebug()<<"Problem parsing PYQAC args"; //FIXME we should throw or add an error return code from this call
-    }
-
-
-    return args;*/
 }
 
 void PyRunner::printPyDict(PyObject *dict)
@@ -480,6 +457,7 @@ void PyRunner::printPyTuple(PyObject *tuple)
 
 QString PyRunner::parseObject(PyObject *object)
 {
+    PRINT_THREAD_INFO
     PyTypeObject* type = object->ob_type;
     const char* p = type->tp_name;
 
@@ -590,6 +568,7 @@ void PyRunner::getReturnValues()
 
 QString PyRunner::syncCallFunction(QString functionName, QVariantList params)
 {
+    PRINT_THREAD_INFO
     PyFunctionCall call;
     call.CallID = QUuid::createUuid();
     call.synch = true;
@@ -652,6 +631,7 @@ void PyRunner::checkError()
 
 void PyRunner::asyncCallFunction(QString functionName, QStringList params)
 {
+    PRINT_THREAD_INFO
     PyFunctionCall call;
     call.CallID = QUuid::createUuid();
     call.synch = false;
@@ -663,11 +643,14 @@ void PyRunner::asyncCallFunction(QString functionName, QStringList params)
     call.error = false;
 
     this->moveToThread(m_py_thread);
+    qDebug() << "after move to thread";
+    PRINT_THREAD_INFO
     emit(startCallSignal(call));
 }
 
 void PyRunner::startCallSlot(PyFunctionCall call)
 {
+    PRINT_THREAD_INFO
     try {
         processCall(call);
     } catch (...)
@@ -679,6 +662,7 @@ void PyRunner::startCallSlot(PyFunctionCall call)
 
 void PyRunner::callDidFinishedSlot(PyFunctionCall call)
 {
+    PRINT_THREAD_INFO
     if(call.synch)
     {
         trackCall(call);

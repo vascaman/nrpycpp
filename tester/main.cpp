@@ -3,6 +3,7 @@
 #include <QStringList>
 #include <QDir>
 #include <QVariantList>
+#include <QThread>
 
 #include "PyRunnerQt.h"
 
@@ -28,8 +29,7 @@ int main(int argc, char *argv[])
     params.append("param_3");
     params.append("param_4");
 
-    //qDebug()<<"start iteration "<<i;
-    //PyEnvironment::getInstance().start();
+    qDebug() << "Application thread " << QThread::currentThread();
     for (int i=0; i<1; i++)
     {
         qDebug() << "Executing Python script:" << pythonFilePath;
