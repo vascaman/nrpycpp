@@ -4,5 +4,8 @@
 //includes for the sleep
 #include <thread>
 #include <chrono>
-using namespace std::literals::chrono_literals;
+
+#define sleep_for_millis(x) std::this_thread::sleep_for(std::chrono::milliseconds(x));
+
+
 #endif // SLEEP_HEADER_H

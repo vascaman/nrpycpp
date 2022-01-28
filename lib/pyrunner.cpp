@@ -603,7 +603,7 @@ QString PyRunner::syncCallFunction(QString functionName, QVariantList params)
 
     while (!checkCall(call.CallID))
     {
-        std::this_thread::sleep_for(1000ms);
+        sleep_for_millis(1000);
     }
 
     call = getCall(call.CallID);

@@ -6,10 +6,7 @@
 
 #include "PyRunnerQt.h"
 
-//for sleeping
-#include <thread>
-#include <chrono>
-using namespace std::literals::chrono_literals;
+#include "../lib/sleep_header.h"
 
 int main(int argc, char *argv[])
 {
@@ -88,7 +85,7 @@ int main(int argc, char *argv[])
         qDebug() << "errorMessage:" << w->getErrorMessage();
         delete (w);
     }
-    std::this_thread::sleep_for(2000ms);
+    sleep_for_millis(2000);
 
     //PyEnvironment::getInstance().stop();
     qDebug() << "finished";
