@@ -1,7 +1,13 @@
 #include "pyrunner.h"
+
 #include <QDebug>
 #include <QSharedPointer>
 #include <QVariant>
+
+//includes for the sleep
+#include <thread>
+#include <chrono>
+using namespace std::chrono_literals;
 
 
 PyRunner::~PyRunner()
@@ -600,11 +606,7 @@ QString PyRunner::syncCallFunction(QString functionName, QVariantList params)
 
     while (!checkCall(call.CallID))
     {
-#ifdef WIN32
-         _sleep(1000);
-#else
-        usleep(1);
-#endif
+        std::this_thread::sleep_for(1000ms);
     }
 
     call = getCall(call.CallID);

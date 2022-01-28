@@ -6,12 +6,11 @@
 
 #include "PyRunnerQt.h"
 
-#ifndef WIN32
-#include <unistd.h> //for sleep()
-#else
-#include <windows.h>
-#define sleep Sleep
-#endif
+
+//includes for the sleep
+#include <thread>
+#include <chrono>
+using namespace std::chrono_literals;
 
 int main(int argc, char *argv[])
 {
@@ -37,7 +36,7 @@ int main(int argc, char *argv[])
     //PyEnvironment::getInstance().start();
     for (int i=0; i<1; i++)
     {
-        qDebug() << pythonFilePath;
+        qDebug() << "Executing Python script:" << pythonFilePath;
         PyRunnerQt * w = new PyRunnerQt(pythonFilePath, dependencies);
 
         QString myparm = "ciccio";
@@ -90,7 +89,7 @@ int main(int argc, char *argv[])
         qDebug() << "errorMessage:" << w->getErrorMessage();
         delete (w);
     }
-    sleep(2);
+    std::this_thread::sleep_for(2000ms);
 
     //PyEnvironment::getInstance().stop();
     qDebug() << "finished";
