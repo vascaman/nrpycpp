@@ -63,6 +63,7 @@ class PyRunner : public QObject
     PyObject * getModuleDict();
     PyObject * m_module_dict;
 
+    void setup();
 
     /*Function context call*/
     PyGILState_STATE openCallContext();
@@ -116,13 +117,12 @@ private:
 
 
 signals:
-    void setupSignal();
+    //void setupSignal();
     void tearDownSignal();
     void startCallSignal(PyFunctionCall call);
     void callDidFinishedSignal(PyFunctionCall call);
 
 private slots:
-    void setup();
     void tearDown();
     void startCallSlot(PyFunctionCall call);
     void callDidFinishedSlot(PyFunctionCall call);

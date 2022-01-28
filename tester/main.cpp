@@ -36,38 +36,41 @@ int main(int argc, char *argv[])
         PyRunnerQt * w = new PyRunnerQt(pythonFilePath, dependencies);
 
         QString myparm = "ciccio";
-        QVariantList vl;
-        vl << myparm;
+        QVariantList paramlist;
+        paramlist << myparm;
         qDebug() << "Calling upper with param: " << myparm;
-        qDebug() << "test result:" << w->syncCallFunction("upper", vl);
+        qDebug() << "test result:" << w->syncCallFunction("upper", paramlist);
 
-        QVariantList twoparms;
-        twoparms << "foo" << "bar";
-        qDebug() << "Calling swapp with params: " << twoparms;
-        qDebug() << "swapp result:" << w->syncCallFunction("swapp", twoparms);
-
-
-        QVariantList threeparms;
-        threeparms << "foo" << "bar" << "zoidberg";
-        qDebug() << "Calling shiftR3 with params: " << threeparms;
-        qDebug() << "swapp result:" << w->syncCallFunction("shiftR3", threeparms);
-
-        QVariantList threeparmsVariant;
-        threeparmsVariant << 1 << 2 << 3.14;
-        qDebug() << "Calling shiftR3 with params: " << threeparmsVariant;
-        qDebug() << "shiftR3 result:" << w->syncCallFunction("shiftR3", threeparmsVariant);
+        paramlist.clear();
+        paramlist << "foo" << "bar";
+        qDebug() << "Calling swapp with params: " << paramlist;
+        qDebug() << "swapp result:" << w->syncCallFunction("swapp", paramlist);
 
 
+        paramlist.clear();
+        paramlist << "foo" << "bar" << "zoidberg";
+        qDebug() << "Calling shiftR3 with params: " << paramlist;
+        qDebug() << "shiftR3 result:" << w->syncCallFunction("shiftR3", paramlist);
 
-        twoparms.clear();
-        twoparms << 1.4 << 41;
-        qDebug() << "Calling sum with params: " << twoparms;
-        qDebug() << "sum result:" << w->syncCallFunction("sum", twoparms);
+        paramlist.clear();
+        paramlist << 1 << false << 3.14;
+        qDebug() << "Calling shiftR3 with params: " << paramlist;
+        qDebug() << "shiftR3 result:" << w->syncCallFunction("shiftR3", paramlist);
 
-        twoparms.clear();
-        twoparms << true;
-        qDebug() << "Calling negate with params: " << twoparms;
-        qDebug() << "negate result:" << w->syncCallFunction("negate", twoparms);
+        paramlist.clear();
+        paramlist << 5;
+        qDebug() << "Calling lengthy_func with params: " << paramlist;
+        qDebug() << "lenghty_func result:" << w->syncCallFunction("lengthy_func", paramlist);
+
+        paramlist.clear();
+        paramlist << 1.4 << 41;
+        qDebug() << "Calling sum with params: " << paramlist;
+        qDebug() << "sum result:" << w->syncCallFunction("sum", paramlist);
+
+        paramlist.clear();
+        paramlist << true;
+        qDebug() << "Calling negate with params: " << paramlist;
+        qDebug() << "negate result:" << w->syncCallFunction("negate", paramlist);
 
 
         /* maybe needed for iQAC test(?)

@@ -6,7 +6,7 @@
 
 #include "sleep_header.h"
 
-#define NRPYQT_DEBUG
+#define NRPYQT_DEBUG1
 
 #ifdef NRPYQT_DEBUG
 #define PRINT_THREAD_INFO qDebug() << Q_FUNC_INFO << QThread::currentThread();
@@ -20,6 +20,7 @@ PyRunner::~PyRunner()
      * Thread will self destroy when the finished() signal arrives
     */
 
+    PRINT_THREAD_INFO
     tearDown();
     Py_DecRef(m_module_dict);
 }
@@ -41,13 +42,17 @@ PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
     connect(m_py_thread, &QThread::finished, m_py_thread, &QThread::deleteLater);
 
     connect(this, &PyRunner::startCallSignal, this, &PyRunner::startCallSlot);
-    connect(this, &PyRunner::setupSignal, this, &PyRunner::setup);
+    //connect(this, &PyRunner::setupSignal, this, &PyRunner::setup);
     connect(this, &PyRunner::tearDownSignal, this, &PyRunner::tearDown);
 
     this->moveToThread(m_py_thread);
     qDebug() << "after move to thread";
     PRINT_THREAD_INFO
-    emit(setupSignal());
+
+    //The call to emit in the ctor makes no sense, especially with parenthesis that is not an emit but a function call
+    //emit(setupSignal());
+    //let's call stup directly
+    setup();
 }
 
 void PyRunner::setup()
@@ -68,9 +73,9 @@ void PyRunner::setup()
     catch(...)
     {
         /*
-         *  who i sgenerating the exception?
+         *  who is generating the exception?
          */
-        qDebug() << "[ERROR] cannot setup pyrunner";
+        qCritical() << "[ERROR] cannot setup pyrunner";
         PyErr_Print();
     }
 }
@@ -201,7 +206,7 @@ void PyRunner::processCall(PyFunctionCall call)
             call.returnValue = parseObject(py_ret);
             Py_DecRef(py_ret);
         } else {
-            call.errorMessage.append("PyQAC ERROR : retrieving result from function named \""+call.functionName+"\"!");
+            call.errorMessage.append("NrPyCpp ERROR : retrieving result from function named \"" + call.functionName + "\"!");
 
         }
 
@@ -209,7 +214,7 @@ void PyRunner::processCall(PyFunctionCall call)
         Py_DecRef(py_function_name);
         Py_DecRef(py_func);
 
-        if(params.size())
+        if(params.size()) //FIXME - params is a member variable that is never used (WTF?) (2022-01-27 FL)
             Py_DecRef(py_args);
 
         closeCallContext(gstate);
@@ -303,6 +308,13 @@ void PyRunner::untrackCall(PyFunctionCall call)
     m_callsMutex.unlock();
 }
 
+/*!
+ * \internal
+ * \brief PyRunner::checkCall verifies if the returning call has the callID requested
+ * \param callID
+ * \return true if the result arrived, false otherwise
+ * \note this is executed on the application thread (it is called from the syncCallFunction())
+ */
 bool PyRunner::checkCall(QUuid callID)
 {
     PRINT_THREAD_INFO
@@ -576,9 +588,10 @@ QString PyRunner::syncCallFunction(QString functionName, QVariantList params)
     call.params = params;
     call.error = false;
 
+    //The following move to thread makes no sense, we already did that in ctor
     this->moveToThread(m_py_thread);
 
-    emit(startCallSignal(call));
+    emit startCallSignal(call);
 
     while (!checkCall(call.CallID))
     {
@@ -626,7 +639,7 @@ void PyRunner::checkError()
         m_errorMessage = syncCallFunction("getErrorMsg");
 
     if(m_errorCode!=0 && !m_syntaxError)
-        m_errorString = m_scriptFileName+" reported error";
+        m_errorString = m_scriptFileName + " reported error";
 }
 
 void PyRunner::asyncCallFunction(QString functionName, QStringList params)

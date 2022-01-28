@@ -44,3 +44,8 @@ def sum(a,b):
 def negate(a):
     return not a
 
+
+def lengthy_func(a):
+    import time
+    time.sleep(a)
+    return a + 42
