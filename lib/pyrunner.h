@@ -109,7 +109,7 @@ public:
     //void getReturnValues();
 
     //calling custom functions
-    void asyncCallFunction(QString functionName, QStringList params = QStringList());
+    QString asyncCallFunction(QString functionName, QVariantList params = QVariantList());
     QVariant syncCallFunction(QString functionName, QVariantList params = QVariantList());
 
     //checking for errors
@@ -126,7 +126,9 @@ signals:
     //void setupSignal();
     void tearDownSignal();
     void startCallRequestedSignal(PyFunctionCall call);
-    void callCompletedSignal(PyFunctionCall call);
+    //START_SIGNAL_METHODS
+    void callCompletedSignal(QString);//PyFunctionCall call);
+    //END_SIGNAL_METHODS
 
 private slots:
     void tearDown();

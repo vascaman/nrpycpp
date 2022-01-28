@@ -543,23 +543,21 @@ QString PyRunner::getErrorMessage()
 
 
 
-void PyRunner::asyncCallFunction(QString functionName, QStringList params)
+QString PyRunner::asyncCallFunction(QString functionName, QVariantList params)
 {
     PRINT_THREAD_INFO
     PyFunctionCall call;
     call.CallID = QUuid::createUuid();
     call.synch = false;
     call.functionName = functionName;
-    QVariantList paramsvl;
-    foreach (QString s, params)
-        paramsvl << s;
-    call.params = paramsvl;
+    call.params = params;
     call.error = false;
 
     this->moveToThread(m_py_thread);
     qDebug() << "after move to thread";
     PRINT_THREAD_INFO
     emit(startCallRequestedSignal(call));
+    return call.CallID.toString();
 }
 
 void PyRunner::onStartCallRequest(PyFunctionCall call)
@@ -580,5 +578,7 @@ void PyRunner::handleCompletedCall(PyFunctionCall call)
     if(call.synch)
     {
         trackCall(call);
+    } else {
+        emit callCompletedSignal(call.CallID.toString());
     }
 }

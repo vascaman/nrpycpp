@@ -1,6 +1,7 @@
 QT -= gui
 
-SOURCES = main.cpp
+SOURCES = main.cpp \
+    pycpptester.cpp
 
 LIBS = -L$$PWD/../lib/last_build
 
@@ -12,3 +13,6 @@ CONFIG(debug, debug|release) {
     linux: LIBSUFFIX = "_d"
 }
 LIBS += -lnrPyCpp$${LIBSUFFIX}
+
+HEADERS += \
+    pycpptester.h

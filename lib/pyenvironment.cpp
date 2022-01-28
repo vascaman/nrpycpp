@@ -40,7 +40,7 @@ bool PyEnvironment::stop()
     try {
 
 //        PyGILState_STATE gstate = PyGILState_Ensure();
-        Py_Finalize(); // FIXME <--- this is crashing on windows (2022-01-28 FL)
+        //Py_Finalize(); // FIXME <--- this is crashing on windows (2022-01-28 FL)
         m_initialized = false;
 //        PyGILState_Release(gstate);
     } catch (...) {
