@@ -4,10 +4,7 @@
 #include <QSharedPointer>
 #include <QVariant>
 
-//includes for the sleep
-#include <thread>
-#include <chrono>
-using namespace std::chrono_literals;
+#include "sleep_header.h"
 
 
 PyRunner::~PyRunner()

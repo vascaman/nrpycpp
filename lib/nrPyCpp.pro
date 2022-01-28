@@ -53,7 +53,8 @@ message("nrPyCpp LIBS = $${LIBS}")
 HEADERS += \
     pyenvironment.h \
     pyrunner.h \
-    PyRunnerQt.h
+    PyRunnerQt.h \
+    sleep_header.h
 
 DISTFILES += \
     PyQAC.py \
