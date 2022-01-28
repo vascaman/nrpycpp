@@ -40,43 +40,51 @@ void PyCppTester::execute()
 
         connect(w, &PyRunnerQt::callCompletedSignal, this, &PyCppTester::onCallFinished);
         QVariantList paramlist;
+        QString funcname;
 
-        /*QString myparm = "ciccio";
+        QString myparm = "ciccio";
+        funcname = "upper";
         paramlist << myparm;
-        qDebug() << "Calling upper with param: " << myparm;
-        qDebug() << "test result:" << w->syncCallFunction("upper", paramlist);
+        qDebug() << "Calling " << funcname << " with params: " << paramlist;
+        qDebug() << funcname << " result:" << w->syncCallFunction(funcname, paramlist);
 
+        funcname = "swapp";
         paramlist.clear();
         paramlist << "foo" << "bar";
-        qDebug() << "Calling swapp with params: " << paramlist;
-        qDebug() << "swapp result:" << w->syncCallFunction("swapp", paramlist);
+        qDebug() << "Calling " << funcname << " with params: " << paramlist;
+        qDebug() << funcname << " result:" << w->syncCallFunction(funcname, paramlist);
 
 
+        funcname = "shiftR3";
         paramlist.clear();
         paramlist << "foo" << "bar" << "zoidberg";
-        qDebug() << "Calling shiftR3 with params: " << paramlist;
-        qDebug() << "shiftR3 result:" << w->syncCallFunction("shiftR3", paramlist);
+        qDebug() << "Calling " << funcname << " with params: " << paramlist;
+        qDebug() << funcname << " result:" << w->syncCallFunction(funcname, paramlist);
 
+        funcname = "shiftR3";
         paramlist.clear();
         paramlist << 1 << false << 3.14;
         qDebug() << "Calling shiftR3 with params: " << paramlist;
         qDebug() << "shiftR3 result:" << w->syncCallFunction("shiftR3", paramlist);
 
+        funcname = "lengthy_func";
         paramlist.clear();
         paramlist << 5;
-        qDebug() << "Calling lengthy_func with params: " << paramlist;
-        qDebug() << "lenghty_func result:" << w->syncCallFunction("lengthy_func", paramlist);
+        qDebug() << "Calling " << funcname << " with params: " << paramlist;
+        qDebug() << funcname << " result:" << w->syncCallFunction(funcname, paramlist);
 
+        funcname = "sum";
         paramlist.clear();
         paramlist << 1.4 << 41;
-        qDebug() << "Calling sum with params: " << paramlist;
-        qDebug() << "sum result:" << w->syncCallFunction("sum", paramlist);
+        qDebug() << "Calling " << funcname << " with params: " << paramlist;
+        qDebug() << funcname << " result:" << w->syncCallFunction(funcname, paramlist);
 
+        funcname = "negate";
         paramlist.clear();
         paramlist << true;
-        qDebug() << "Calling negate with params: " << paramlist;
-        qDebug() << "negate result:" << w->syncCallFunction("negate", paramlist);
-*/
+        qDebug() << "Calling " << funcname << " with params: " << paramlist;
+        qDebug() << funcname << " result:" << w->syncCallFunction(funcname, paramlist);
+
 
         paramlist.clear();
         paramlist << 1;
@@ -84,25 +92,20 @@ void PyCppTester::execute()
         qDebug() << "lenghty_func result:" << w->asyncCallFunction("lengthy_func", paramlist);
 
 
+        funcname = "countbytes";
         paramlist.clear();
         QByteArray ba(1000 ,'a');
         paramlist << ba;
-        qDebug() << "Calling countbytes with params: " << paramlist;
-        qDebug() << "countbytes result:" << w->syncCallFunction("countbytes", paramlist);
+        qDebug() << "Calling " << funcname << " with params: " << paramlist;
+        qDebug() << funcname << " result:" << w->syncCallFunction(funcname, paramlist);
 
+        funcname = "incbytes";
         paramlist.clear();
         QByteArray ba2(1000 ,'a');
         paramlist << ba2 << 2;
-        qDebug() << "Calling incabytes with params: " << paramlist;
-        qDebug() << "incabytes result:" << w->syncCallFunction("incbytes", paramlist);
+        qDebug() << "Calling " << funcname << " with params: " << paramlist;
+        qDebug() << funcname << " result:" << w->syncCallFunction(funcname, paramlist);
 
-        /* maybe needed for iQAC test(?)
-        w->setParam("param_0", "8.8.8.8");
-        w->start();
-        sleep(5);
-        w->stop();
-        qDebug()<<"test result:"<<w->getResult("result_0").toUtf8().data();
-        */
 
         qDebug() << "errorcode:"    << w->getErrorCode();
         qDebug() << "errorString:"  << w->getErrorString();
