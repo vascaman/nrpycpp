@@ -35,8 +35,9 @@ int main(int argc, char *argv[])
         qDebug() << "Executing Python script:" << pythonFilePath;
         PyRunnerQt * w = new PyRunnerQt(pythonFilePath, dependencies);
 
-        QString myparm = "ciccio";
         QVariantList paramlist;
+
+        /*QString myparm = "ciccio";
         paramlist << myparm;
         qDebug() << "Calling upper with param: " << myparm;
         qDebug() << "test result:" << w->syncCallFunction("upper", paramlist);
@@ -71,7 +72,19 @@ int main(int argc, char *argv[])
         paramlist << true;
         qDebug() << "Calling negate with params: " << paramlist;
         qDebug() << "negate result:" << w->syncCallFunction("negate", paramlist);
+*/
 
+        paramlist.clear();
+        QByteArray ba(1000 ,'a');
+        paramlist << ba;
+        qDebug() << "Calling countbytes with params: " << paramlist;
+        qDebug() << "countbytes result:" << w->syncCallFunction("countbytes", paramlist);
+
+        paramlist.clear();
+        QByteArray ba2(1000 ,'a');
+        paramlist << ba2 << 2;
+        qDebug() << "Calling incabytes with params: " << paramlist;
+        qDebug() << "incabytes result:" << w->syncCallFunction("incbytes", paramlist);
 
         /* maybe needed for iQAC test(?)
         w->setParam("param_0", "8.8.8.8");
@@ -81,8 +94,6 @@ int main(int argc, char *argv[])
         qDebug()<<"test result:"<<w->getResult("result_0").toUtf8().data();
         */
 
-        //w->syncCallFunction("deinit", QStringList());
-        //qDebug() << "checkError:"   << w->checkError();
         qDebug() << "errorcode:"    << w->getErrorCode();
         qDebug() << "errorString:"  << w->getErrorString();
         qDebug() << "errorMessage:" << w->getErrorMessage();

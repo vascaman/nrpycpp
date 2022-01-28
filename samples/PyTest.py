@@ -49,3 +49,13 @@ def lengthy_func(a):
     import time
     time.sleep(a)
     return a + 42
+
+
+def countbytes(ba):
+    return len(ba)
+
+
+def incbytes(ba, n):
+    for b in ba:
+        b += n
+    return ba

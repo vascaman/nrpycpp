@@ -1,3 +1,10 @@
+/**************************************************************************
+ *  Copyright (C) 2022 by NetResults S.r.l. ( http://www.netresults.it )  *
+ *  Author( s ) :                                                         *
+ *         Stefano Aru                  <s.aru@netresults.it>             *
+ *         Francesco Lamonica      <f.lamonica@netresults.it>             *
+ **************************************************************************/
+
 #ifndef PYRUNNER_H
 #define PYRUNNER_H
 #include <QObject>
@@ -23,7 +30,7 @@ struct PyFunctionCall
     QUuid CallID;
     QString functionName;
     bool synch;
-    QString returnValue;
+    QVariant returnValue;
     QVariantList params;
     bool error;
     QString errorMessage;
@@ -47,7 +54,6 @@ class PyRunner : public QObject
     QString m_scriptFileName;
     QString m_scriptFilePath;
     QThread * m_py_thread;
-    QStringList params;
     void processCall(PyFunctionCall call);
 
     QStringList m_params;
@@ -69,7 +75,7 @@ class PyRunner : public QObject
     PyGILState_STATE openCallContext();
     void closeCallContext(PyGILState_STATE state);
 
-    QString parseObject(PyObject * object);
+    QVariant parseObject(PyObject * object);
     PyObject * getTupleParams(QVariantList paramList);
 
     /*debug utils*/
@@ -90,28 +96,28 @@ public:
 
     //START_WRAPPER_METHODS
     //changing status
-    void start();
-    void stop();
+    //void start();
+    //void stop();
 
     //settings params
     QStringList getParams() const;
-    void setParams(const QStringList &params);
-    void setParam(QString paramName, QString paramValue);
+    //void setParams(const QStringList &params);
+    //void setParam(QString paramName, QString paramValue);
 
     //getting results
-    QString getResult(QString resultName);
-    void getReturnValues();
+    //QString getResult(QString resultName);
+    //void getReturnValues();
 
     //calling custom functions
     void asyncCallFunction(QString functionName, QStringList params = QStringList());
-    QString syncCallFunction(QString functionName, QVariantList params = QVariantList());
+    QVariant syncCallFunction(QString functionName, QVariantList params = QVariantList());
 
     //checking for errors
     int getErrorCode();
     QString getErrorString();
     QString getErrorMessage();
 
-    void checkError();
+    //void checkError();
     //END_WRAPPER_METHODS
 private:
 

@@ -2,7 +2,7 @@
 
 PyEnvironment::~PyEnvironment()
 {
-
+    qDebug() << "PyEnvironment dtor";
 }
 
 PyRunner * PyEnvironment::getInstanceModule(QString modulePath,QStringList dependecies)
@@ -40,11 +40,11 @@ bool PyEnvironment::stop()
     try {
 
 //        PyGILState_STATE gstate = PyGILState_Ensure();
-        Py_Finalize();
+        Py_Finalize(); // FIXME <--- this is crashing on windows (2022-01-28 FL)
         m_initialized = false;
 //        PyGILState_Release(gstate);
     } catch (...) {
-
+        qDebug() << "Got execpetion in " << Q_FUNC_INFO;
     }
 
     return true;

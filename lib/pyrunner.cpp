@@ -1,3 +1,10 @@
+/**************************************************************************
+ *  Copyright (C) 2022 by NetResults S.r.l. ( http://www.netresults.it )  *
+ *  Author( s ) :                                                         *
+ *         Stefano Aru                  <s.aru@netresults.it>             *
+ *         Francesco Lamonica      <f.lamonica@netresults.it>             *
+ **************************************************************************/
+
 #include "pyrunner.h"
 
 #include <QDebug>
@@ -87,33 +94,7 @@ void PyRunner::tearDown()
     m_py_thread->exit();
 }
 
-//TODO - this function probably belongs to atena agent and should be in a derived class (2022-01-25 FL)
-void PyRunner::start()
-{
-    qDebug() << "pyrunner::start()";
-    asyncCallFunction("start");
-}
 
-
-//TODO - this function probably belongs to atena agent and should be in a derived class (2022-01-25 FL)
-void PyRunner::stop()
-{
-    qDebug() << "pyrunner::stop()";
-    syncCallFunction("stop");
-}
-
-//TODO - this function probably belongs to atena agent and should be in a derived class (2022-01-25 FL)
-QString PyRunner::getResult(QString resultName)
-{
-    qDebug() << "pyrunner::getResult()";
-    QString functionName = "getResult";
-
-    QVariantList params;
-    params.append(resultName);
-    QString result = syncCallFunction(functionName, params);
-    qDebug() << QString("result for '%1' is %2").arg(resultName).arg(result);
-    return  result;
-}
 
 PyGILState_STATE PyRunner::openCallContext()
 {
@@ -188,9 +169,7 @@ void PyRunner::processCall(PyFunctionCall call)
             //FIXME - shouldn't we return here? (2022-01-26 FL)
         }
 
-        QVariantList vl;
-        //foreach (QString s, call.params)
-        //    vl << s;
+
         PyObject * py_args = getTupleParams(call.params);//borrowed reference
 
         PyObject * py_ret = NULL;
@@ -213,9 +192,7 @@ void PyRunner::processCall(PyFunctionCall call)
         Py_DecRef(py_lib_mod_dict);
         Py_DecRef(py_function_name);
         Py_DecRef(py_func);
-
-        if(params.size()) //FIXME - params is a member variable that is never used (WTF?) (2022-01-27 FL)
-            Py_DecRef(py_args);
+        Py_DecRef(py_args);
 
         closeCallContext(gstate);
         emit(callDidFinishedSlot(call)); //FIXME - this is NOT a signal (2022-01-25 FL)
@@ -233,45 +210,9 @@ QStringList PyRunner::getParams() const
     return m_params;
 }
 
-//this is specific to atena i believe
-void PyRunner::setParams(const QStringList &params)
-{
-    m_params = params;
-
-    QString stringParams;
-
-    stringParams = "['"+params[0]+"'";
-
-    for(int i=1; i<params.length(); i++)
-    {
-        stringParams += ",'"+params[i]+"'";
-    }
-
-    stringParams += "]";
-
-    //qDebug()<<stringParams;
-    QVariantList paramsvl;
-    foreach (QString s, params)
-        paramsvl << s;
-
-    syncCallFunction("setParams", paramsvl);
-}
 
 
-//this is specific to atena i believe
-void PyRunner::setParam(QString paramName, QString paramValue)
-{
-    QString functionName = "setParam";
 
-    QStringList params;
-    params.append(paramName);
-    params.append(paramValue);
-
-    QVariantList paramsvl;
-    foreach (QString s, params)
-        paramsvl << s;
-    syncCallFunction(functionName, paramsvl);
-}
 
 void PyRunner::trackCall(PyFunctionCall call)
 {
@@ -363,50 +304,12 @@ PyObject * PyRunner::getModuleDict()
 }
 
 
-QString getPythonParamTypeString(QVariant v)
-{
-    QString rettype; //empty is invalid string
-    if (v.type() == QVariant::String) {
-        return "s";
-    } else if (v.type() == QVariant::Int || v.type() == QVariant::UInt
-                || v.type() == QVariant::LongLong || v.type() == QVariant::ULongLong) {
-        return "l";
-    }
-
-    return rettype;
-}
-
-
-PyObject* generatePyObjectPtrFromArg(QVariant v)
-{
-    if (v.type() == QVariant::String) {
-        return Py_BuildValue("s", v.toString().constData());
-    } else if (v.type() == QVariant::Int || v.type() == QVariant::UInt
-                || v.type() == QVariant::LongLong || v.type() == QVariant::ULongLong) {
-        return Py_BuildValue("l", v.toLongLong());
-    }
-    return nullptr;
-}
-
-
 PyObject *PyRunner::getTupleParams(QVariantList params)//borrowed reference (WHICH REF? FL)
 {
     PRINT_THREAD_INFO
     if(params.size()==0) {
         return NULL;
     }
-
-    QString formatString = "(";
-    foreach (QVariant v, params)
-    {
-        QString pyvartype = getPythonParamTypeString(v);
-        formatString += pyvartype;
-    }
-    formatString += ")";
-
-    char * p = new char[formatString.length() + 1];
-    QSharedPointer<char> formatChars = QSharedPointer<char>(p); //FIXME - why the shared pointer? it is not used anywhere
-    strcpy(formatChars.data(), formatString.toUtf8().constData());
 
     PyErr_Print();//if you remove this, python >3 stops working
 
@@ -422,6 +325,10 @@ PyObject *PyRunner::getTupleParams(QVariantList params)//borrowed reference (WHI
             PyTuple_SET_ITEM(tup, i, PyFloat_FromDouble(params[i].toDouble()));
         } else if (params[i].type() == QVariant::Bool) {
             PyTuple_SET_ITEM(tup, i, PyBool_FromLong(params[i].toInt())); //FIXME - this conversion is flaky
+        } else if(params[i].type()==QVariant::ByteArray) {
+            //PyObject * bytesParam = Py_BuildValue("y#", params[i].toByteArray().constData(),params[i].toByteArray().size() -1 );
+            PyObject * bytesParam = PyBytes_FromStringAndSize(params[i].toByteArray().constData(), params[i].toByteArray().size());
+            PyTuple_SET_ITEM(tup, i, bytesParam);
         }
         // Note that PyTuple_SET_ITEM steals the reference we get from PyLong_FromLong.
     }
@@ -448,9 +355,7 @@ void PyRunner::printPyList(PyObject *list)
     for (int i=0; i<size; i++)
     {
         PyObject * tupleValue = PyList_GetItem(list,i); //Borrowed reference
-//        PyObject* objectsRepresentation = PyObject_Repr(tupleValue);//New reference
         qDebug()<<"value"<<i<<parseObject(tupleValue);
-//        Py_DecRef(objectsRepresentation);
     }
 }
 
@@ -461,19 +366,17 @@ void PyRunner::printPyTuple(PyObject *tuple)
     for (int i=0; i<tupleSize; i++)
     {
         PyObject * tupleValue = PyTuple_GetItem(tuple,i); //Borrowed reference
-        PyObject* objectsRepresentation = PyObject_Repr(tupleValue);//New reference
-        const char* s = PyByteArray_AsString(objectsRepresentation);
-        Py_DecRef(objectsRepresentation);
+        qDebug()<<"value"<<i<<parseObject(tupleValue);
     }
 }
 
-QString PyRunner::parseObject(PyObject *object)
+QVariant PyRunner::parseObject(PyObject *object)
 {
     PRINT_THREAD_INFO
     PyTypeObject* type = object->ob_type;
     const char* p = type->tp_name;
 
-    QString returnValue = "";
+    QVariant returnValue;
 
     if(QString("str").compare(p)==0)
     {
@@ -486,42 +389,55 @@ QString PyRunner::parseObject(PyObject *object)
         Py_DecRef(str);
         PyErr_Print();
 #endif
-        returnValue = QString(s);
-        returnValue = returnValue.mid(1,returnValue.length()-2);
+        QString valueString = QString(s);
+        valueString = valueString.mid(1,valueString.length()-2);
+        returnValue.setValue(valueString);
         Py_DecRef(str);
         PyErr_Print();
         Py_DecRef(objectsRepresentation);
-    }
-    else if(QString("int").compare(p)==0)
-    {
-        PyObject * strObject = PyObject_Str(object);//new reference
-        returnValue = parseObject(strObject);
-        Py_DecRef(strObject);
-    }
-    else if(QString("float").compare(p)==0)
-    {
-        PyObject * strObject = PyObject_Str(object);//new reference
-        returnValue = parseObject(strObject);
-        Py_DecRef(strObject);
-    }
-    else if(QString("double").compare(p)==0)
-    {
-        PyObject * strObject = PyObject_Str(object);//new reference
-        returnValue = parseObject(strObject);
-        Py_DecRef(strObject);
-    }
-    else if(QString("NoneType").compare(p)==0)
-    {
+    } else if(PyLong_CheckExact(object) ) {
+        int value = PyLong_AsLong(object);
+        returnValue.setValue(value);
+    } else if(PyBool_Check(object) ) {
+        int intbool = PyObject_IsTrue(object);
+        bool value = (intbool==1?true:false);
+        returnValue.setValue(value);
+    } else if(PyFloat_Check(object)) {
+        float value = PyFloat_AsDouble(object);
+        returnValue.setValue(value);
+    } else if(QString("NoneType").compare(p)==0) {
         //do nothing
-    }
-    else
-    {
-//        qDebug()<<"PyQAC Warning: attemp to parse unknown type"<<p;
-        PyObject * strObject = PyObject_Str(object);//new reference
-        returnValue = parseObject(strObject);
-        Py_DecRef(strObject);
+    } else if(PyBytes_Check(object)) {
+        Py_ssize_t size = PyBytes_Size(object);
+        char * b = PyBytes_AsString(object);
+        if(b)
+        {
+            QByteArray ba = QByteArray(b, static_cast<int>(size));
+            returnValue.setValue(ba);
+        }
+    } else if(PyByteArray_Check(object)) {
+        Py_ssize_t size = PyByteArray_Size(object);
+        char * b = PyByteArray_AsString(object);
+        if(b)
+        {
+            QByteArray ba = QByteArray(b, static_cast<int>(size));
+            returnValue.setValue(ba);
+        }
+    } else if(PyList_Check(object)) {
+        QVariantList list;
+        int size = PyList_Size(object);
+        for(int i=0;i<size;i++)
+        {
+             PyObject*iObject = PyList_GetItem(object, i);
+             QVariant iVariant = parseObject(iObject);
+             list.append(iVariant);
+        }
+        returnValue.setValue(list);
+    } else {
+        qWarning() << "Warning: attempt to parse unknown type" << p;
     }
 
+    PyErr_Print();
     return returnValue;
 }
 
@@ -572,13 +488,9 @@ void PyRunner::unloadCurrentModule()
 }
 
 
-//this is specific to atena i believe
-void PyRunner::getReturnValues()
-{
 
-}
 
-QString PyRunner::syncCallFunction(QString functionName, QVariantList params)
+QVariant PyRunner::syncCallFunction(QString functionName, QVariantList params)
 {
     PRINT_THREAD_INFO
     PyFunctionCall call;
@@ -630,17 +542,6 @@ QString PyRunner::getErrorMessage()
 }
 
 
-void PyRunner::checkError()
-{
-    if(!m_syntaxError)
-        m_errorCode = syncCallFunction("getErrorCode").toInt();
-
-    if(!m_syntaxError)
-        m_errorMessage = syncCallFunction("getErrorMsg");
-
-    if(m_errorCode!=0 && !m_syntaxError)
-        m_errorString = m_scriptFileName + " reported error";
-}
 
 void PyRunner::asyncCallFunction(QString functionName, QStringList params)
 {
