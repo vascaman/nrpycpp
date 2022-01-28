@@ -10,14 +10,17 @@ PYTHON_LIB_PATH     = /usr/lib/python$${PYTHON_VERSION}
 PYTHON_INCLUDE_PATH = /usr/include/python$${PYTHON_VERSION}
 }
 
+#on mac we use xcode provided python
 macos {
 PYTHON_VERSION=3.8
 PYTHON_LIB_PATH     = /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/$${PYTHON_VERSION}/lib/
 PYTHON_INCLUDE_PATH = /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/$${PYTHON_VERSION}/Headers/
 }
 
+
+#on windows we provide the python ourselves (python 3.10.2 downloaded form python.org)
 win32 {
-PYTHON_VERSION = 2.7
-PYTHON_LIB_PATH     = C:\Python27-x86\libs
-PYTHON_INCLUDE_PATH = C:\Python27-x86\include
+PYTHON_VERSION=310
+PYTHON_LIB_PATH     = $$PWD/python-win32
+PYTHON_INCLUDE_PATH = $$PWD/python-win32/include
 }

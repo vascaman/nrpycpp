@@ -8,6 +8,9 @@
 
 #ifndef WIN32
 #include <unistd.h> //for sleep()
+#else
+#include <windows.h>
+#define sleep Sleep
 #endif
 
 int main(int argc, char *argv[])

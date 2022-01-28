@@ -1,5 +1,5 @@
 
-VERSION = 1.0.4
+NRPYCPP_VERSION = 1.0.4
 
 #DO NOT CHANGE ANYTHING BELOW THIS LINE UNLESS YOU ARE A MAINTAINER
 
@@ -13,8 +13,14 @@ CONFIG -= app_bundle
 
 TEMPLATE = lib
 win32{
-    CONFIG -= dll
+    #CONFIG -= dll
     CONFIG += console
+
+QMAKE_CXXFLAGS_RELEASE += /Zi
+QMAKE_LFLAGS_RELEASE += /DEBUG
+QMAKE_LFLAGS_RELEASE += /OPT:REF
+QMAKE_LFLAGS_RELEASE += /OPT:ICF
+    DEFINES += NRPYQT_LIB_EXPORTS
 }
 
 macos: CONFIG += dll #to build a framework
@@ -122,6 +128,7 @@ unix:!ios {
     for(vinc, DIST_INCS):QMAKE_POST_LINK+="$$QMAKE_COPY $$vinc \"$$INCLUDE_DIR\" $$escape_expand(\\n\\t)"
 }
 
+WINEXT = lib pdb dll
 win32 {
     DLL = $$replace(DLL,"/","\\")
     DSTDIR = $$replace(DSTDIR,"/","\\")
@@ -130,7 +137,10 @@ win32 {
     QMAKE_POST_LINK+="$$QMAKE_CHK_DIR_EXISTS \"$$INCLUDE_DIR\" $$QMAKE_MKDIR \"$$INCLUDE_DIR\" $$escape_expand(\\n\\t)"
     #for(ext, WINEXT):QMAKE_POST_LINK+="$$QMAKE_COPY $$join(DLL,,,.$${ext}) \"$$FINALDIR\" $$escape_expand(\\n\\t)"
     for(ext, WINEXT):QMAKE_POST_LINK+="$$QMAKE_COPY $$join(DLL,,,.$${ext}) \"$$DSTDIR\" $$escape_expand(\\n\\t)"
-    for(vinc, DIST_INCS):QMAKE_POST_LINK+="$$QMAKE_COPY $$vinc \"$$INCLUDE_DIR\" $$escape_expand(\\n\\t)"
+    for(vinc, DIST_INCS):QMAKE_POST_LINK+="$$QMAKE_COPY $$replace(vinc,"/","\\") \"$$INCLUDE_DIR\" $$escape_expand(\\n\\t)"
+    #copy the python lib
+    PYTHONLIB=$$PWD\python-win32\python$${PYTHON_VERSION}.dll
+    QMAKE_POST_LINK+="$$QMAKE_COPY $$replace(PYTHONLIB,"/","\\") \"$$DSTDIR\" $$escape_expand(\\n\\t)"
 }
 
 
