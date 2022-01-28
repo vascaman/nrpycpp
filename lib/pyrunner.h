@@ -120,7 +120,7 @@ public:
     //void checkError();
     //END_WRAPPER_METHODS
 private:
-
+    void handleCompletedCall(PyFunctionCall call);
 
 signals:
     //void setupSignal();
@@ -131,7 +131,6 @@ signals:
 private slots:
     void tearDown();
     void startCallSlot(PyFunctionCall call);
-    void callDidFinishedSlot(PyFunctionCall call);
 };
 
 #endif // PYRUNNER_H

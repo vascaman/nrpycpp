@@ -117,7 +117,7 @@ void PyRunner::processCall(PyFunctionCall call)
     // but after the process call is happening, so how can this enter the check? (2022-01-25 FL)
     if(m_syntaxError)
     {
-        emit(callDidFinishedSlot(call)); //FIXME - this is NOT a signal (2022-01-25 FL)
+        handleCompletedCall(call);
         return;
     }
 
@@ -195,7 +195,7 @@ void PyRunner::processCall(PyFunctionCall call)
         Py_DecRef(py_args);
 
         closeCallContext(gstate);
-        emit(callDidFinishedSlot(call)); //FIXME - this is NOT a signal (2022-01-25 FL)
+        handleCompletedCall(call);
     } catch (...)
     {
         //qDebug() << e.what();
@@ -574,7 +574,7 @@ void PyRunner::startCallSlot(PyFunctionCall call)
 
 }
 
-void PyRunner::callDidFinishedSlot(PyFunctionCall call)
+void PyRunner::handleCompletedCall(PyFunctionCall call)
 {
     PRINT_THREAD_INFO
     if(call.synch)
