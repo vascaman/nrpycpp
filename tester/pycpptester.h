@@ -18,8 +18,9 @@ public:
     void executeTestList();
 protected slots:
     void onCallFinished(QString);
+    void ontestlistfinished();
 signals:
-
+    void testlistfinished();
 };
 
 #endif // PYCPPTESTER_H

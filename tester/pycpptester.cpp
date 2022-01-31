@@ -93,6 +93,7 @@ void PyCppTester::executeTestList()
     sleep_for_millis(2000);
 
     qDebug() << "finished";
+    ontestlistfinished();
 }
 
 
@@ -113,4 +114,9 @@ void PyCppTester::onCallFinished(QString c)
     qDebug() << Q_FUNC_INFO << c << QDateTime::currentDateTime();
 }
 
+
+void PyCppTester::ontestlistfinished()
+{
+    delete m_pPyRunner;
+}
 
