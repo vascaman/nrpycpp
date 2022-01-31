@@ -2,25 +2,6 @@
 
 # if__name__ == "__main__":
 #     pass
-def printCose(cose):
-    print("This is a static string")
-    print("The passed param is: ", cose)
-    a = str(cose).upper()
-    return a
-
-
-def init():
-    print("Called init")
-
-
-def deinit():
-    print("Called deinit")
-
-
-def setParam(cose):
-    print("This is a static string")
-    print("The passed param is: ", cose)
-
 
 def upper(cose):
     print("This is a static string")
@@ -55,7 +36,11 @@ def countbytes(ba):
     return len(ba)
 
 
-def incbytes(ba, n):
-    for b in ba:
-        b += n
+def replbytes(bytes, orig, new):
+    ba = bytearray()
+    ba = bytes
+    print("passed ", ba)
+    ba = ba.replace(bytearray(orig.encode()), bytearray(new.encode()))
+    print("returning: ", ba)
     return ba
+

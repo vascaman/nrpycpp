@@ -15,8 +15,9 @@ public:
     explicit PyCppTester(QString pyscriptfullpath, QObject *parent = nullptr);
     ~PyCppTester();
     void execute(QString func, QVariantList params, bool sync=true);
-    void executeTestList();
+    void go();
 protected slots:
+    void executeTestList();
     void onCallFinished(QString);
     void ontestlistfinished();
 signals:

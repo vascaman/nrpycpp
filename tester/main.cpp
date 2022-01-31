@@ -13,7 +13,8 @@ int main(int argc, char *argv[])
     QString pythonFilePath = samplespath + "PyTest.py";
 
     PyCppTester tester(pythonFilePath);
-    tester.executeTestList();
+    tester.go();
 
-    return a.exec();
+    int ret = a.exec();
+    qDebug() << "QCoreApp returned " << ret;
 }

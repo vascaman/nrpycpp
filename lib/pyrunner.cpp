@@ -32,6 +32,7 @@ PyRunner::~PyRunner()
     Py_DecRef(m_module_dict);
 }
 
+
 PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
 {
     PRINT_THREAD_INFO
@@ -62,6 +63,7 @@ PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
     setup();
 }
 
+
 void PyRunner::setup()
 {
     PRINT_THREAD_INFO
@@ -87,6 +89,7 @@ void PyRunner::setup()
     }
 }
 
+
 void PyRunner::tearDown()
 {
     PRINT_THREAD_INFO
@@ -95,12 +98,12 @@ void PyRunner::tearDown()
 }
 
 
-
 PyGILState_STATE PyRunner::openCallContext()
 {
     PyGILState_STATE gstate = PyGILState_Ensure();
     return gstate;
 }
+
 
 void PyRunner::closeCallContext(PyGILState_STATE state)
 {
@@ -109,6 +112,7 @@ void PyRunner::closeCallContext(PyGILState_STATE state)
     //not needed https://stackoverflow.com/questions/8451334/why-is-pygilstate-release-throwing-fatal-python-errors
     //PyEval_ReleaseLock();
 }
+
 
 void PyRunner::processCall(PyFunctionCall call)
 {
@@ -211,9 +215,6 @@ QStringList PyRunner::getParams() const
 }
 
 
-
-
-
 void PyRunner::trackCall(PyFunctionCall call)
 {
     PRINT_THREAD_INFO
@@ -222,6 +223,7 @@ void PyRunner::trackCall(PyFunctionCall call)
     //printCalls();
     m_callsMutex.unlock();
 }
+
 
 void PyRunner::printCalls()
 {
@@ -232,6 +234,7 @@ void PyRunner::printCalls()
     }
 }
 
+
 PyFunctionCall PyRunner::getCall(QUuid callID)
 {
     PRINT_THREAD_INFO
@@ -241,6 +244,7 @@ PyFunctionCall PyRunner::getCall(QUuid callID)
     return returnValue;
 }
 
+
 void PyRunner::untrackCall(PyFunctionCall call)
 {
     m_callsMutex.lock();
@@ -248,6 +252,7 @@ void PyRunner::untrackCall(PyFunctionCall call)
     //printCalls();
     m_callsMutex.unlock();
 }
+
 
 /*!
  * \internal
@@ -264,6 +269,7 @@ bool PyRunner::checkCall(QUuid callID)
     m_callsMutex.unlock();
     return returnValue;
 }
+
 
 PyObject * PyRunner::getModuleDict()
 {
@@ -335,6 +341,7 @@ PyObject *PyRunner::getTupleParams(QVariantList params)//borrowed reference (WHI
     return tup;
 }
 
+
 void PyRunner::printPyDict(PyObject *dict)
 {
     PyObject * keys = PyDict_Keys(dict);
@@ -348,6 +355,7 @@ void PyRunner::printPyDict(PyObject *dict)
     }
 }
 
+
 void PyRunner::printPyList(PyObject *list)
 {
     int size = static_cast<int>(PyList_Size(list));
@@ -359,6 +367,7 @@ void PyRunner::printPyList(PyObject *list)
     }
 }
 
+
 void PyRunner::printPyTuple(PyObject *tuple)
 {
     int tupleSize = static_cast<int>(PyTuple_Size(tuple));
@@ -369,6 +378,7 @@ void PyRunner::printPyTuple(PyObject *tuple)
         qDebug()<<"value"<<i<<parseObject(tupleValue);
     }
 }
+
 
 QVariant PyRunner::parseObject(PyObject *object)
 {
@@ -441,6 +451,7 @@ QVariant PyRunner::parseObject(PyObject *object)
     return returnValue;
 }
 
+
 void PyRunner::loadCurrentModule()
 {
     PyObject* sys = PyImport_ImportModule( "sys" ); //new reference
@@ -465,6 +476,7 @@ void PyRunner::loadCurrentModule()
     Py_DecRef(folder_path);
 }
 
+
 void PyRunner::unloadCurrentModule()
 {
     PyGILState_STATE gstate = PyGILState_Ensure();
@@ -488,8 +500,6 @@ void PyRunner::unloadCurrentModule()
 }
 
 
-
-
 QVariant PyRunner::syncCallFunction(QString functionName, QVariantList params)
 {
     PRINT_THREAD_INFO
@@ -507,7 +517,7 @@ QVariant PyRunner::syncCallFunction(QString functionName, QVariantList params)
 
     while (!checkCall(call.CallID))
     {
-        sleep_for_millis(1000);
+        sleep_for_millis(100);
     }
 
     call = getCall(call.CallID);
@@ -542,7 +552,6 @@ QString PyRunner::getErrorMessage()
 }
 
 
-
 QString PyRunner::asyncCallFunction(QString functionName, QVariantList params)
 {
     PRINT_THREAD_INFO
@@ -560,6 +569,7 @@ QString PyRunner::asyncCallFunction(QString functionName, QVariantList params)
     return call.CallID.toString();
 }
 
+
 void PyRunner::onStartCallRequest(PyFunctionCall call)
 {
     PRINT_THREAD_INFO
@@ -571,6 +581,7 @@ void PyRunner::onStartCallRequest(PyFunctionCall call)
     }
 
 }
+
 
 void PyRunner::handleCompletedCall(PyFunctionCall call)
 {

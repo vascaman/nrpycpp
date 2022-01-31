@@ -27,7 +27,14 @@ PyCppTester::PyCppTester(QString i_pythonscriptfullpath, QObject *parent)
 
 PyCppTester::~PyCppTester()
 {
-    delete m_pPyRunner;
+    if (m_pPyRunner)
+        delete m_pPyRunner;
+}
+
+#include <QTimer>
+void PyCppTester::go()
+{
+    QTimer::singleShot(500, this, [this] {executeTestList();});
 }
 
 void PyCppTester::executeTestList()
@@ -61,7 +68,7 @@ void PyCppTester::executeTestList()
     funcname = "lengthy_func";
     paramlist.clear();
     paramlist << 5;
-    execute(funcname, paramlist, false);
+    //execute(funcname, paramlist, false);
 
     funcname = "sum";
     paramlist.clear();
@@ -76,7 +83,7 @@ void PyCppTester::executeTestList()
     funcname = "lengthy_func";
     paramlist.clear();
     paramlist << 2;
-    execute(funcname, paramlist);
+    //execute(funcname, paramlist);
 
     funcname = "countbytes";
     paramlist.clear();
@@ -84,10 +91,10 @@ void PyCppTester::executeTestList()
     paramlist << ba;
     execute(funcname, paramlist);
 
-    funcname = "incbytes";
+    funcname = "replbytes";
     paramlist.clear();
     QByteArray ba2(1000 ,'a');
-    paramlist << ba2 << 2;
+    paramlist << ba2 << "a" << "x";
     execute(funcname, paramlist);
 
     sleep_for_millis(2000);
@@ -114,9 +121,13 @@ void PyCppTester::onCallFinished(QString c)
     qDebug() << Q_FUNC_INFO << c << QDateTime::currentDateTime();
 }
 
-
+#include <QCoreApplication>
 void PyCppTester::ontestlistfinished()
 {
+    qDebug () << "deleting runner...";
     delete m_pPyRunner;
+    m_pPyRunner = nullptr;
+    qDebug() << "calling app quit...";
+    qApp->quit();
 }
 
