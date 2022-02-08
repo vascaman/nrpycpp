@@ -16,19 +16,21 @@ PyCppTester::PyCppTester(QString i_pythonscriptfullpath, QObject *parent)
     QStringList dependencies;
 //    dependencies.append("/home/aru/Projects/PyQAC/Dependency/");
 //    dependencies.append("/home/aru/Projects/PyQAC/Dependency2/");
-    //dependencies.append("/home/aru/Projects/PyQAC/PyDependencyImporter/");
+    //dependencies.apPypend("/home/aru/Projects/PyQAC/PyDependencyImporter/");
 
     qDebug() << "Executing Python script:" << m_pyscriptPath;
     m_pPyRunner = new PyRunnerQt(m_pyscriptPath, dependencies);
     connect(m_pPyRunner, &PyRunnerQt::callCompletedSignal, this, &PyCppTester::onCallFinished);
-
+    connect(this, &PyCppTester::closeAppRequested, this, &PyCppTester::onCloseAppRequest);
 }
 
 
 PyCppTester::~PyCppTester()
 {
-    if (m_pPyRunner)
+    if (m_pPyRunner) {
         delete m_pPyRunner;
+        m_pPyRunner = nullptr;
+    }
 }
 
 #include <QTimer>
@@ -68,7 +70,7 @@ void PyCppTester::executeTestList()
     funcname = "lengthy_func";
     paramlist.clear();
     paramlist << 5;
-    //execute(funcname, paramlist, false);
+    execute(funcname, paramlist, false);
 
     funcname = "sum";
     paramlist.clear();
@@ -119,14 +121,22 @@ void PyCppTester::execute(QString func, QVariantList params, bool sync)
 void PyCppTester::onCallFinished(QString c)
 {
     qDebug() << Q_FUNC_INFO << c << QDateTime::currentDateTime();
+    //gather async results
+    emit closeAppRequested();
 }
 
 #include <QCoreApplication>
 void PyCppTester::ontestlistfinished()
 {
-    qDebug () << "deleting runner...";
-    delete m_pPyRunner;
-    m_pPyRunner = nullptr;
+    qDebug() << "all tests have been called";
+}
+
+
+void PyCppTester::onCloseAppRequest()
+{
+    //qDebug () << "deleting runner...";
+    //delete m_pPyRunner;
+    //m_pPyRunner = nullptr;
     qDebug() << "calling app quit...";
     qApp->quit();
 }

@@ -20,8 +20,10 @@ protected slots:
     void executeTestList();
     void onCallFinished(QString);
     void ontestlistfinished();
+    void onCloseAppRequest();
 signals:
     void testlistfinished();
+    void closeAppRequested();
 };
 
 #endif // PYCPPTESTER_H
