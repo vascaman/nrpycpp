@@ -1,7 +1,0 @@
-#PYTHON_LIB_PATH = C:\Users\vasca\Projects\python\bin\Windows\x86
-#PYTHON_INCLUDE_PATH = C:\Users\vasca\Projects\python\inc
-
-PYTHON_VERSION = 3.9
-PYTHON_LIB_PATH = /usr/lib/x86_64-linux-gnu/
-PYTHON_INCLUDE_PATH = /usr/include/python3.9
-
