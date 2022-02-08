@@ -13,7 +13,7 @@
 
 #include "sleep_header.h"
 
-#define NRPYQT_DEBUG1
+#define NRPYQT_DEBUG
 
 #ifdef NRPYQT_DEBUG
 #define PRINT_THREAD_INFO qDebug() << Q_FUNC_INFO << QThread::currentThread();
@@ -43,17 +43,17 @@ PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
     m_module_dict = NULL;
     qRegisterMetaType<PyFunctionCall>("PyFunctionCall");
 
-    m_py_thread = new QThread();
-    m_py_thread->setObjectName("NrPyCpp-" + QFileInfo(scriptPath).completeBaseName() + QUuid::createUuid().toString());
-    m_py_thread->start();
+    m_pPythonThread = new QThread();
+    m_pPythonThread->setObjectName("NrPyCpp-" + QFileInfo(scriptPath).completeBaseName() + QUuid::createUuid().toString());
+    m_pPythonThread->start();
 
-    connect(m_py_thread, &QThread::finished, m_py_thread, &QThread::deleteLater);
+    connect(m_pPythonThread, &QThread::finished, m_pPythonThread, &QThread::deleteLater);
 
     connect(this, &PyRunner::startCallRequestedSignal, this, &PyRunner::onStartCallRequest);
     //connect(this, &PyRunner::setupSignal, this, &PyRunner::setup);
     connect(this, &PyRunner::tearDownSignal, this, &PyRunner::tearDown);
 
-    this->moveToThread(m_py_thread);
+    this->moveToThread(m_pPythonThread);
     qDebug() << "after move to thread";
     PRINT_THREAD_INFO
 
@@ -94,7 +94,7 @@ void PyRunner::tearDown()
 {
     PRINT_THREAD_INFO
     unloadCurrentModule();
-    m_py_thread->exit();
+    m_pPythonThread->exit();
 }
 
 
@@ -208,13 +208,6 @@ void PyRunner::processCall(PyFunctionCall call)
 }
 
 
-//this is specific to atena i believe
-QStringList PyRunner::getParams() const
-{
-    return m_params;
-}
-
-
 void PyRunner::trackCall(PyFunctionCall call)
 {
     PRINT_THREAD_INFO
@@ -227,11 +220,13 @@ void PyRunner::trackCall(PyFunctionCall call)
 
 void PyRunner::printCalls()
 {
-    //FIXME - we're accessing m_calls without mutex (2022-01-26 FL)
+    PRINT_THREAD_INFO
+    m_callsMutex.lock();
     foreach(PyFunctionCall call, m_calls.values())
     {
         qDebug()<< "Call Id: "<<call.CallID<<"; name: "<<call.functionName;
     }
+    m_callsMutex.unlock();
 }
 
 
@@ -511,7 +506,7 @@ QVariant PyRunner::syncCallFunction(QString functionName, QVariantList params)
     call.error = false;
 
     //The following move to thread makes no sense, we already did that in ctor
-    this->moveToThread(m_py_thread);
+    this->moveToThread(m_pPythonThread);
 
     emit startCallRequestedSignal(call);
 
@@ -528,7 +523,6 @@ QVariant PyRunner::syncCallFunction(QString functionName, QVariantList params)
     {
         m_syntaxError = true;
         m_errorCode = PyRunnerError_SYNTAX_ERROR;
-        m_errorString = "Syntax error";
         m_errorMessage = call.errorMessage;
         return call.errorMessage;
     }
@@ -541,10 +535,6 @@ int PyRunner::getErrorCode()
     return m_errorCode;
 }
 
-QString PyRunner::getErrorString()
-{
-    return m_errorString;
-}
 
 QString PyRunner::getErrorMessage()
 {
@@ -562,7 +552,7 @@ QString PyRunner::asyncCallFunction(QString functionName, QVariantList params)
     call.params = params;
     call.error = false;
 
-    this->moveToThread(m_py_thread);
+    this->moveToThread(m_pPythonThread);
     qDebug() << "after move to thread";
     PRINT_THREAD_INFO
     emit(startCallRequestedSignal(call));

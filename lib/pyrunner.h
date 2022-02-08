@@ -53,10 +53,9 @@ class PyRunner : public QObject
     QString m_sourceFilePy;
     QString m_scriptFileName;
     QString m_scriptFilePath;
-    QThread * m_py_thread;
+    QThread * m_pPythonThread;
     void processCall(PyFunctionCall call);
 
-    QStringList m_params;
     QMap<QUuid, PyFunctionCall> m_calls;
     QMutex m_callsMutex;
     void trackCall(PyFunctionCall call);
@@ -87,7 +86,6 @@ class PyRunner : public QObject
     //errors
     int m_errorCode;
     bool m_syntaxError;
-    QString m_errorString;
     QString m_errorMessage;
 
 public:
@@ -95,18 +93,6 @@ public:
     ~PyRunner();
 
     //START_WRAPPER_METHODS
-    //changing status
-    //void start();
-    //void stop();
-
-    //settings params
-    QStringList getParams() const;
-    //void setParams(const QStringList &params);
-    //void setParam(QString paramName, QString paramValue);
-
-    //getting results
-    //QString getResult(QString resultName);
-    //void getReturnValues();
 
     //calling custom functions
     QString asyncCallFunction(QString functionName, QVariantList params = QVariantList());
@@ -114,16 +100,13 @@ public:
 
     //checking for errors
     int getErrorCode();
-    QString getErrorString();
     QString getErrorMessage();
 
-    //void checkError();
     //END_WRAPPER_METHODS
 private:
     void handleCompletedCall(PyFunctionCall call);
 
 signals:
-    //void setupSignal();
     void tearDownSignal();
     void startCallRequestedSignal(PyFunctionCall call);
     //START_SIGNAL_METHODS
