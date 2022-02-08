@@ -84,9 +84,7 @@ class PyRunner : public QObject
     void printPyDict(PyObject *list);
 
     //errors
-    int m_errorCode;
     bool m_syntaxError;
-    QString m_errorMessage;
 
 public:
     PyRunner(QString scriptPath, QStringList dependencies=QStringList());
@@ -97,10 +95,6 @@ public:
     //calling custom functions
     QString asyncCallFunction(QString functionName, QVariantList params = QVariantList());
     QVariant syncCallFunction(QString functionName, QVariantList params = QVariantList());
-
-    //checking for errors
-    int getErrorCode();
-    QString getErrorMessage();
 
     //END_WRAPPER_METHODS
 private:

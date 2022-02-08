@@ -13,7 +13,7 @@
 
 #include "sleep_header.h"
 
-#define NRPYQT_DEBUG
+#define NRPYQT_DEBUG_REMOVETOENABLE
 
 #ifdef NRPYQT_DEBUG
 #define PRINT_THREAD_INFO qDebug() << Q_FUNC_INFO << QThread::currentThread();
@@ -36,7 +36,6 @@ PyRunner::~PyRunner()
 PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
 {
     PRINT_THREAD_INFO
-    m_errorCode = PyRunnerError_OK;
     m_syntaxError = false;
     m_sourceFilePy = scriptPath;
     m_dependencies = dependecies;
@@ -519,26 +518,13 @@ QVariant PyRunner::syncCallFunction(QString functionName, QVariantList params)
 
     untrackCall(call);
 
-    if(call.error)
+    if (call.error)
     {
         m_syntaxError = true;
-        m_errorCode = PyRunnerError_SYNTAX_ERROR;
-        m_errorMessage = call.errorMessage;
         return call.errorMessage;
     }
 
     return call.returnValue;
-}
-
-int PyRunner::getErrorCode()
-{
-    return m_errorCode;
-}
-
-
-QString PyRunner::getErrorMessage()
-{
-    return m_errorMessage;
 }
 
 
