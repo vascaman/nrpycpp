@@ -1,5 +1,5 @@
 
-NRPYCPP_VERSION = 1.0.4
+NRPYCPP_VERSION = 1.0.0
 
 #DO NOT CHANGE ANYTHING BELOW THIS LINE UNLESS YOU ARE A MAINTAINER
 
@@ -51,6 +51,7 @@ message("nrPyCpp LIBS = $${LIBS}")
 
 
 HEADERS += \
+    PyCall.h \
     pyenvironment.h \
     pyrunner.h \
     PyRunnerQt.h \
@@ -63,6 +64,7 @@ DISTFILES += \
 
 # includes to be packaged
 DIST_INCS += \
+$$PWD/PyCall.h \
 $$PWD/PyRunnerQt.h
 
 CONFIG(debug, debug|release) {

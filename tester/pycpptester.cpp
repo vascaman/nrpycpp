@@ -49,22 +49,22 @@ void PyCppTester::executeTestList()
 
     funcname = "upper";
     paramlist << "ciccio";
-    execute(funcname, paramlist);
+    //execute(funcname, paramlist);
 
     funcname = "swapp";
     paramlist.clear();
     paramlist << "foo" << "bar";
-    execute(funcname, paramlist);
+    //execute(funcname, paramlist);
 
     funcname = "shiftR3";
     paramlist.clear();
     paramlist << "foo" << "bar" << "zoidberg";
-    execute(funcname, paramlist);
+    //execute(funcname, paramlist);
 
     funcname = "shiftR3";
     paramlist.clear();
     paramlist << 1 << false << 3.14;
-    execute(funcname, paramlist);
+    //execute(funcname, paramlist);
 
 
     funcname = "lengthy_func";
@@ -72,15 +72,18 @@ void PyCppTester::executeTestList()
     paramlist << 5;
     execute(funcname, paramlist, false);
 
+    qDebug() << "Printg calls...";
+    m_pPyRunner->printCalls();
+
     funcname = "sum";
     paramlist.clear();
     paramlist << 1.4 << 41;
-    execute(funcname, paramlist);
+    //execute(funcname, paramlist);
 
     funcname = "negate";
     paramlist.clear();
     paramlist << true;
-    execute(funcname, paramlist);
+    //execute(funcname, paramlist);
 
     funcname = "lengthy_func";
     paramlist.clear();
@@ -91,7 +94,7 @@ void PyCppTester::executeTestList()
     paramlist.clear();
     QByteArray ba(1000 ,'a');
     paramlist << ba;
-    execute(funcname, paramlist);
+    //execute(funcname, paramlist);
 
     funcname = "replbytes";
     paramlist.clear();
@@ -99,18 +102,26 @@ void PyCppTester::executeTestList()
     paramlist << ba2 << "a" << "x";
     execute(funcname, paramlist);
 
-    sleep_for_millis(2000);
+    qDebug() << "sleeping for 2 secs";
+    //sleep_for_millis(2000);
 
-    qDebug() << "finished";
+    qDebug() << "testlist finished at " << QDateTime::currentDateTime();
     ontestlistfinished();
 }
 
 
 void PyCppTester::execute(QString func, QVariantList params, bool sync)
 {
-    qDebug() << QDateTime::currentDateTime()<< " - Calling " << func << " with params: " << params;
+    qDebug() << QDateTime::currentDateTime() << " - Calling" << (sync?"(SYNC)":"(ASYNC)") << func << " with params: " << params;
     if (sync) {
-        qDebug() << func << " result:" << m_pPyRunner->syncCallFunction(func, params);
+        PyFunctionCallResult pyres = m_pPyRunner->syncCallFunction(func, params);
+        QVariant res;
+        if (pyres.error) {
+            res = pyres.errorMessage;
+        } else {
+            res = pyres.returnValue;
+        }
+        qDebug() << func << " result:" << res << "started at " << pyres.startTime << "finished at " << pyres.endTime;
     } else {
         qDebug() << func << " callID:" << m_pPyRunner->asyncCallFunction(func, params);
     }
@@ -122,16 +133,34 @@ void PyCppTester::onCallFinished(QString c)
 {
     qDebug() << Q_FUNC_INFO << c << QDateTime::currentDateTime();
     //gather async results
-    emit closeAppRequested();
+    foreach(QString s, m_pPyRunner->getAsyncCallsList()) {
+        PyFunctionCallResult r = m_pPyRunner->getAsyncCallResult(s);
+        qDebug() << "result / start / end: " << r.returnValue << r.startTime << r.endTime;
+    }
+
+    quitIfThereAreNoMoreCallPending();
+}
+
+
+void PyCppTester::ontestlistfinished()
+{
+    qDebug() << "all testlist tests have been called";
+    quitIfThereAreNoMoreCallPending();
+}
+
+
+void PyCppTester::quitIfThereAreNoMoreCallPending()
+{
+    int pendingCalls = m_pPyRunner->getAsyncCallsList().size();
+    if ( pendingCalls == 0) {
+        qDebug() << "all async calls are completed, calling quit.";
+        emit closeAppRequested();
+    } else {
+        qDebug() << "Waiting for " << pendingCalls << " calls to terminate";
+    }
 }
 
 #include <QCoreApplication>
-void PyCppTester::ontestlistfinished()
-{
-    qDebug() << "all tests have been called";
-}
-
-
 void PyCppTester::onCloseAppRequest()
 {
     //qDebug () << "deleting runner...";

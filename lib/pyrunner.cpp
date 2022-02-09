@@ -49,11 +49,10 @@ PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
     connect(m_pPythonThread, &QThread::finished, m_pPythonThread, &QThread::deleteLater);
 
     connect(this, &PyRunner::startCallRequestedSignal, this, &PyRunner::onStartCallRequest);
-    //connect(this, &PyRunner::setupSignal, this, &PyRunner::setup);
     connect(this, &PyRunner::tearDownSignal, this, &PyRunner::tearDown);
 
     this->moveToThread(m_pPythonThread);
-    qDebug() << "after move to thread";
+
     PRINT_THREAD_INFO
 
     //The call to emit in the ctor makes no sense, especially with parenthesis that is not an emit but a function call
@@ -63,6 +62,7 @@ PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
 }
 
 
+//This method should probably inserted within the constructor, i don't get how an exception could be thrown...
 void PyRunner::setup()
 {
     PRINT_THREAD_INFO
@@ -125,7 +125,6 @@ void PyRunner::processCall(PyFunctionCall call)
     }
 
     try {
-
         PyGILState_STATE gstate = openCallContext();
 
         PyObject * py_lib_mod_dict = getModuleDict(); //borrowed reference of global variable
@@ -135,61 +134,60 @@ void PyRunner::processCall(PyFunctionCall call)
         }
         Py_IncRef(py_lib_mod_dict);
 
-        if(!py_lib_mod_dict)
+        if (!py_lib_mod_dict)
         {
-            call.error = true;
-            call.errorMessage.append("PyQAC ERROR: Cannot find module at \"" + m_sourceFilePy+"\"!");
+            call.result().error = true;
+            call.result().errorMessage.append("PyQAC ERROR: Cannot find module at \"" + m_sourceFilePy+"\"!");
             //FIXME - should not we return an error? (2022-01-26 FL)
             qCritical() << "CRITICAL - cannot use Python module dictionary...";
         }
 
-        char * p = new char[call.functionName.length() + 1];
+        char * p = new char[call.functionName().length() + 1];
         QSharedPointer<char> function = QSharedPointer<char>(p);
-        strcpy(function.data(), call.functionName.toUtf8().constData());
+        strcpy(function.data(), call.functionName().toUtf8().constData());
 
         //get function name
         PyObject * py_function_name = NULL;
 
         //PyString_FromString
-        if(!call.error)
-            py_function_name = PyUnicode_FromString(function.data()); // this->PyStringFromString(call.functionName);// PyString_FromString(function);//new reference
+        if (!call.result().error)
+            py_function_name = PyUnicode_FromString(function.data()); //new reference
 
-        if(!py_function_name)
-            call.error=true;
+        if (!py_function_name)
+            call.result().error = true;
 
         //get function object
         PyObject * py_func = NULL;
-        if(!call.error)
-        {
-            py_func = PyDict_GetItem(py_lib_mod_dict, py_function_name);//borrowed reference
+        if (!call.result().error) {
+            py_func = PyDict_GetItem(py_lib_mod_dict, py_function_name); //borrowed reference
             Py_IncRef(py_func);
         }
 
-        if(!py_func){
-            call.error = true;
-            call.errorMessage.append("ERROR: cannot find python function named \"" + call.functionName+"\"!");
-            qDebug() << call.errorMessage;
+        if (!py_func) {
+            call.result().error = true;
+            call.result().errorMessage.append("ERROR: cannot find python function named \"" + call.functionName() +"\"!");
+            qDebug() << call.result().errorMessage;
             //FIXME - shouldn't we return here? (2022-01-26 FL)
         }
 
 
-        PyObject * py_args = getTupleParams(call.params);//borrowed reference
+        PyObject * py_args = getTupleParams(call.params());//borrowed reference
 
         PyObject * py_ret = NULL;
 
-        if(!call.error)
+        if (!call.result().error) {
+            //this is the actual python execution
             py_ret = PyObject_CallObject(py_func, py_args);//new reference
+        }
 
-        if(!py_ret)
-            call.error=true;
+        if (!py_ret)
+            call.result().error = true;
 
-        if(!call.error)
-        {
-            call.returnValue = parseObject(py_ret);
+        if (!call.result().error) {
+               call.result().returnValue = parseObject(py_ret);
             Py_DecRef(py_ret);
         } else {
-            call.errorMessage.append("NrPyCpp ERROR : retrieving result from function named \"" + call.functionName + "\"!");
-
+            call.result().errorMessage.append("NrPyCpp ERROR retrieving result from function named \"" + call.functionName() + "\"!");
         }
 
         Py_DecRef(py_lib_mod_dict);
@@ -199,36 +197,48 @@ void PyRunner::processCall(PyFunctionCall call)
 
         closeCallContext(gstate);
         handleCompletedCall(call);
-    } catch (...)
-    {
+    } catch (...) {
         //qDebug() << e.what();
         PyErr_Print();
     }
 }
 
 
+/*!
+ * \internal
+ * \brief PyRunner::trackCall will insert or update the call info during its process
+ * \param call
+ */
 void PyRunner::trackCall(PyFunctionCall call)
 {
     PRINT_THREAD_INFO
     m_callsMutex.lock();
-    m_calls.insert(call.CallID, call);
-    //printCalls();
+    m_calls.insert(call.id(), call);
     m_callsMutex.unlock();
 }
 
 
+/*!
+ * \brief PyRunner::printCalls utility function to print current calls
+ */
 void PyRunner::printCalls()
 {
     PRINT_THREAD_INFO
     m_callsMutex.lock();
-    foreach(PyFunctionCall call, m_calls.values())
+    foreach(PyFunctionCall call, m_calls)
     {
-        qDebug()<< "Call Id: "<<call.CallID<<"; name: "<<call.functionName;
+        qDebug() << call.getInfo();
     }
     m_callsMutex.unlock();
 }
 
 
+/*!
+ * \internal
+ * \brief PyRunner::getCall returns a copy of the call specified by its callid
+ * \param callID
+ * \return
+ */
 PyFunctionCall PyRunner::getCall(QUuid callID)
 {
     PRINT_THREAD_INFO
@@ -239,14 +249,64 @@ PyFunctionCall PyRunner::getCall(QUuid callID)
 }
 
 
+/*!
+ * \internal
+ * \brief PyRunner::untrackCall remove the specified call from the tracking map
+ * \param call
+ * this is called when the function ha completed its processing
+ */
 void PyRunner::untrackCall(PyFunctionCall call)
 {
     m_callsMutex.lock();
-    m_calls.remove(call.CallID);
-    //printCalls();
+    m_calls.remove(call.id());
     m_callsMutex.unlock();
 }
 
+
+QString PyRunner::getCallInfo(QString id)
+{
+    PyFunctionCall c = getCall(id);
+    return c.getInfo();
+}
+
+
+/*!
+ * \brief PyRunner::getAsyncCallResult return the result info for the specified call
+ * \param id
+ * \return a PyFunctionCallResult containing all information about the finished call
+ * \note if the result is valid (i.e. the call has finished processing) then the call is removed from
+ * the tracking map so any following request for result of the same call will provide an invalid empty result
+ */
+PyFunctionCallResult PyRunner::getAsyncCallResult(QString id)
+{
+    QUuid uid(id);
+    PyFunctionCall c = getCall(uid);
+    PyFunctionCallResult result = c.result();
+    if (!result.endTime.isValid()) {
+        qDebug() << "The call with id " << id << " seems not to have finished yet...";
+    } else {
+        qDebug() << "Call with id " << id << " seems to have completed processing, removing from async call list";
+        untrackCall(c);
+    }
+    return result;
+}
+
+
+/*!
+ * \brief PyRunner::getAsyncCallsList
+ * \return a list of the id of the calls that have not been requested their results
+ * either because the processing did not end, or because the result has not been requested (for finished calls)
+ */
+QStringList PyRunner::getAsyncCallsList()
+{
+    QStringList ls;
+    m_callsMutex.lock();
+    foreach (PyFunctionCall c, m_calls) {
+        ls << c.id().toString();
+    }
+    m_callsMutex.unlock();
+    return ls;
+}
 
 /*!
  * \internal
@@ -258,10 +318,19 @@ void PyRunner::untrackCall(PyFunctionCall call)
 bool PyRunner::checkCall(QUuid callID)
 {
     PRINT_THREAD_INFO
-    m_callsMutex.lock();
-    bool returnValue = m_calls.contains(callID);
-    m_callsMutex.unlock();
-    return returnValue;
+    PyFunctionCall c = getCall(callID);
+
+    if (!c.isValid()) {
+        qDebug() << "Call has not yet been started";
+        return false;
+    }
+
+    if (!c.result().endTime.isValid()) {
+        qDebug() << "Call has not yet completed";
+        return false;
+    }
+
+    return true;
 }
 
 
@@ -304,6 +373,12 @@ PyObject * PyRunner::getModuleDict()
 }
 
 
+/*!
+ * \internal
+ * \brief PyRunner::getTupleParams transforms the c++ parameters into python types
+ * \param params
+ * \return
+ */
 PyObject *PyRunner::getTupleParams(QVariantList params)//borrowed reference (WHICH REF? FL)
 {
     PRINT_THREAD_INFO
@@ -373,7 +448,12 @@ void PyRunner::printPyTuple(PyObject *tuple)
     }
 }
 
-
+/*!
+ * \internal
+ * \brief PyRunner::parseObject parse the return value from the python call
+ * \param object
+ * \return
+ */
 QVariant PyRunner::parseObject(PyObject *object)
 {
     PRINT_THREAD_INFO
@@ -493,63 +573,67 @@ void PyRunner::unloadCurrentModule()
 //    PyEval_ReleaseLock();
 }
 
-
-QVariant PyRunner::syncCallFunction(QString functionName, QVariantList params)
+/*!
+ * \brief PyRunner::syncCallFunction calls the specified function synchronously i.e. will not return until the processing has finished
+ * \param functionName the function to be called
+ * \param params a list of params for the specified function
+ * \return a PyFunctionCallResult struct with data about the function result: start and endtime, errors, etc.
+ */
+PyFunctionCallResult PyRunner::syncCallFunction(QString functionName, QVariantList params)
 {
     PRINT_THREAD_INFO
-    PyFunctionCall call;
-    call.CallID = QUuid::createUuid();
-    call.synch = true;
-    call.functionName = functionName;
-    call.params = params;
-    call.error = false;
+    PyFunctionCall call(functionName, params, true);
 
-    //The following move to thread makes no sense, we already did that in ctor
-    this->moveToThread(m_pPythonThread);
-
+    //The following signal will start the execution of the call in the python thread
+    //while we wait for its completion here on the app thread
     emit startCallRequestedSignal(call);
 
-    while (!checkCall(call.CallID))
+    while (!checkCall(call.id())) //TODO - this should be replaces with a waitcondition
     {
         sleep_for_millis(100);
     }
 
-    call = getCall(call.CallID);
+    //update with the result from the map
+    call = getCall(call.id());
 
     untrackCall(call);
-
-    if (call.error)
-    {
-        m_syntaxError = true;
-        return call.errorMessage;
-    }
-
-    return call.returnValue;
+    return call.result();
 }
 
 
+/*!
+ * \brief PyRunner::asyncCallFunction calls the specified function in an async manner (i.e. will return immediately and notify user when it completed)
+ * \param functionName the name of the function to be executed asynchronously
+ * \param params a list with the function params
+ * \return the id of the call so that its result can be queried when ready
+ */
 QString PyRunner::asyncCallFunction(QString functionName, QVariantList params)
 {
     PRINT_THREAD_INFO
-    PyFunctionCall call;
-    call.CallID = QUuid::createUuid();
-    call.synch = false;
-    call.functionName = functionName;
-    call.params = params;
-    call.error = false;
+    PyFunctionCall call(functionName, params, false);
 
-    this->moveToThread(m_pPythonThread);
-    qDebug() << "after move to thread";
-    PRINT_THREAD_INFO
-    emit(startCallRequestedSignal(call));
-    return call.CallID.toString();
+    //this will signal to start execution of the specified call on the python thread
+    emit startCallRequestedSignal(call);
+    return call.id().toString();
 }
 
 
+/*!
+ * \internal
+ * \brief PyRunner::onStartCallRequest executes the specified call in python
+ * \param call a copy of the call data structure that should be executed
+ *
+ * This is a slot and meant to be called only via signal so that it will be executed
+ * on the correct thread (the python one).
+ * The function will start by setting the startTime and then upserting the stored
+ * value in the tracking map with trackCall() then will start the processing with processCall().
+ */
 void PyRunner::onStartCallRequest(PyFunctionCall call)
 {
     PRINT_THREAD_INFO
     try {
+        call.result().startTime = QDateTime::currentDateTime();
+        trackCall(call);
         processCall(call);
     } catch (...)
     {
@@ -559,13 +643,18 @@ void PyRunner::onStartCallRequest(PyFunctionCall call)
 }
 
 
+/*!
+ * \internal
+ * \brief PyRunner::handleCompletedCall will track the end time and then signal if it is an async call that result is avalaible
+ * \param call the call that has just completed
+ * \note this is only called within processCall() so maybe it could be refactored in to that method
+ */
 void PyRunner::handleCompletedCall(PyFunctionCall call)
 {
     PRINT_THREAD_INFO
-    if(call.synch)
-    {
-        trackCall(call);
-    } else {
-        emit callCompletedSignal(call.CallID.toString());
+    call.result().endTime = QDateTime::currentDateTime();
+    trackCall(call);
+    if (!call.isSync()) {
+        emit callCompletedSignal(call.id().toString());
     }
 }

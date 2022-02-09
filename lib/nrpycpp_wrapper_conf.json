@@ -2,9 +2,9 @@
   "parser": {
     "header_file_to_parse": "pyrunner.h",
     "internal_object_class": "PyRunner",
-    "enum_types": ["LineOnHoldStatusType","DtmfDeliveryModeType", "AudioDeviceType", "VoicemailMessageStatusType", "PbxService::PbxServiceType"],
-    "int_types": ["kpeLineId_t", "kpeDeviceId_t"],
-    "special_types": []
+    "enum_types": [],
+    "int_types": [],
+    "special_types": ["PyFunctionCallResult"]
   },
   "exporter": {
     "namespace": "NrPyCpp",
@@ -14,7 +14,7 @@
       "header_class_start": [
         "\n#ifndef PYRUNNER_QT_INCS",
         "#define PYRUNNER_QT_INCS",
-        "\n//#include \"NrPyCppTypes.h\"",
+        "\n#include \"PyCall.h\"",
         "#include <QStringList>",
         "#include <QVariantList>",
         "#include <QObject>",

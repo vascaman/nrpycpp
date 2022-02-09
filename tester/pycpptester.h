@@ -11,6 +11,7 @@ class PyCppTester : public QObject
     PyRunnerQt *m_pPyRunner;
     QString m_pyscriptPath;
 
+    void quitIfThereAreNoMoreCallPending();
 public:
     explicit PyCppTester(QString pyscriptfullpath, QObject *parent = nullptr);
     ~PyCppTester();

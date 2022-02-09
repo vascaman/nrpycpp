@@ -25,20 +25,9 @@
 #include <Python.h>
 #pragma pop_macro("slots")
 
-struct PyFunctionCall
-{
-    QUuid CallID;
-    QString functionName;
-    bool synch;
-    QVariant returnValue;
-    QVariantList params;
-    bool error;
-    QString errorMessage;
-};
+#include "PyCall.h"
 
-Q_DECLARE_METATYPE(PyFunctionCall)
-
-enum  PyRunnerError
+enum  PyRunnerError //TODO move this into an nrcpptypes.h and include it in the wrapper
 {
     PyRunnerError_OK = 0,//no error
     PyRunnerError_SYNTAX_ERROR = 3001,
@@ -56,7 +45,7 @@ class PyRunner : public QObject
     QThread * m_pPythonThread;
     void processCall(PyFunctionCall call);
 
-    QMap<QUuid, PyFunctionCall> m_calls;
+    QHash<QUuid, PyFunctionCall> m_calls;
     QMutex m_callsMutex;
     void trackCall(PyFunctionCall call);
     PyFunctionCall getCall(QUuid callID);
@@ -70,7 +59,7 @@ class PyRunner : public QObject
 
     void setup();
 
-    /*Function context call*/
+    /* Function context call */
     PyGILState_STATE openCallContext();
     void closeCallContext(PyGILState_STATE state);
 
@@ -79,7 +68,6 @@ class PyRunner : public QObject
 
     /*debug utils*/
     void printPyTuple(PyObject* tuple);
-    void printCalls();
     void printPyList(PyObject *list);
     void printPyDict(PyObject *list);
 
@@ -92,19 +80,25 @@ public:
 
     //START_WRAPPER_METHODS
 
+    //utils
+    void printCalls();
+
     //calling custom functions
     QString asyncCallFunction(QString functionName, QVariantList params = QVariantList());
-    QVariant syncCallFunction(QString functionName, QVariantList params = QVariantList());
-
+    PyFunctionCallResult syncCallFunction(QString functionName, QVariantList params = QVariantList());
+    PyFunctionCallResult getAsyncCallResult(QString id);
+    QString getCallInfo(QString id);
+    QStringList getAsyncCallsList();
     //END_WRAPPER_METHODS
+
 private:
     void handleCompletedCall(PyFunctionCall call);
 
 signals:
-    void tearDownSignal();
+    void tearDownSignal(); //FIXME - WTF? this is never emitted (2022-02-01 FL)
     void startCallRequestedSignal(PyFunctionCall call);
     //START_SIGNAL_METHODS
-    void callCompletedSignal(QString);//PyFunctionCall call);
+    void callCompletedSignal(QString);
     //END_SIGNAL_METHODS
 
 private slots:
