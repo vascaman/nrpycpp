@@ -1,5 +1,6 @@
 {
   "parser": {
+    "namespace": "NrPyCpp",
     "header_file_to_parse": "pyrunner.h",
     "internal_object_class": "PyRunner",
     "enum_types": [],
@@ -7,7 +8,6 @@
     "special_types": ["PyFunctionCallResult"]
   },
   "exporter": {
-    "namespace": "NrPyCpp",
     "cpp_qt": {
       "generated_wrapper": "PyRunnerQt",
       "internal_pointer_var": "m_pPyRunner",
