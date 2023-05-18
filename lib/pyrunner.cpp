@@ -23,12 +23,18 @@
 
 PyRunner::~PyRunner()
 {
+    PRINT_THREAD_INFO
     /*
      * Thread will self destroy when the finished() signal arrives
     */
 
-    PRINT_THREAD_INFO
-    tearDown();
+//    delete m_pPythonThread;
+
+    m_pPythonThread->exit();
+    m_pPythonThread->wait();
+    m_pPythonThread->deleteLater();
+//    delete m_pPythonThread;
+//    tearDown();
     Py_DecRef(m_module_dict);
 }
 
@@ -40,17 +46,20 @@ PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
     m_sourceFilePy = scriptPath;
     m_dependencies = dependecies;
     m_module_dict = NULL;
+
     qRegisterMetaType<PyFunctionCall>("PyFunctionCall");
 
     m_pPythonThread = new QThread();
     m_pPythonThread->setObjectName("NrPyCpp-" + QFileInfo(scriptPath).completeBaseName() + QUuid::createUuid().toString());
-    m_pPythonThread->start();
 
-    connect(m_pPythonThread, &QThread::finished, m_pPythonThread, &QThread::deleteLater);
 
+//    connect(m_pPythonThread, &QThread::finished, m_pPythonThread, &QThread::deleteLater);
+    connect(m_pPythonThread, &QThread::finished, this, &PyRunner::tearDown);
+    connect(m_pPythonThread, &QThread::started, this, &PyRunner::loadStuff);
     connect(this, &PyRunner::startCallRequestedSignal, this, &PyRunner::onStartCallRequest);
-    connect(this, &PyRunner::tearDownSignal, this, &PyRunner::tearDown);
+//    connect(this, &PyRunner::tearDownSignal, this, &PyRunner::tearDown);
 
+    m_pPythonThread->start();
     this->moveToThread(m_pPythonThread);
 
     PRINT_THREAD_INFO
@@ -77,6 +86,9 @@ void PyRunner::setup()
 
         m_scriptFileName = scriptFileInfo.completeBaseName();
         m_scriptFilePath = scriptFileInfo.dir().path();
+
+//        loadCurrentModule();
+
     }
     catch(...)
     {
@@ -92,8 +104,11 @@ void PyRunner::setup()
 void PyRunner::tearDown()
 {
     PRINT_THREAD_INFO
+
+//    m_pPythonThread->exit();
+//    m_pPythonThread->wait();
+//    m_pPythonThread->deleteLater();
     unloadCurrentModule();
-    m_pPythonThread->exit();
 }
 
 
@@ -113,7 +128,7 @@ void PyRunner::closeCallContext(PyGILState_STATE state)
 }
 
 
-void PyRunner::processCall(PyFunctionCall call)
+void PyRunner::processCall(PyFunctionCall * call)
 {
     PRINT_THREAD_INFO
      //TODO - I don't get this check, syntax_error is set only in the syncCallFunction
@@ -136,58 +151,59 @@ void PyRunner::processCall(PyFunctionCall call)
 
         if (!py_lib_mod_dict)
         {
-            call.result().error = true;
-            call.result().errorMessage.append("PyQAC ERROR: Cannot find module at \"" + m_sourceFilePy+"\"!");
+            call->result().error = true;
+            call->result().errorMessage.append("PyQAC ERROR: Cannot find module at \"" + m_sourceFilePy+"\"!");
             //FIXME - should not we return an error? (2022-01-26 FL)
             qCritical() << "CRITICAL - cannot use Python module dictionary...";
         }
 
-        char * p = new char[call.functionName().length() + 1];
+        char * p = new char[call->functionName().length() + 1];
         QSharedPointer<char> function = QSharedPointer<char>(p);
-        strcpy(function.data(), call.functionName().toUtf8().constData());
+        strcpy(function.data(), call->functionName().toUtf8().constData());
 
         //get function name
         PyObject * py_function_name = NULL;
 
         //PyString_FromString
-        if (!call.result().error)
+        if (!call->result().error)
             py_function_name = PyUnicode_FromString(function.data()); //new reference
 
         if (!py_function_name)
-            call.result().error = true;
+            call->result().error = true;
 
         //get function object
         PyObject * py_func = NULL;
-        if (!call.result().error) {
+        if (!call->result().error) {
             py_func = PyDict_GetItem(py_lib_mod_dict, py_function_name); //borrowed reference
             Py_IncRef(py_func);
         }
 
         if (!py_func) {
-            call.result().error = true;
-            call.result().errorMessage.append("ERROR: cannot find python function named \"" + call.functionName() +"\"!");
-            qDebug() << call.result().errorMessage;
+            call->result().error = true;
+            call->result().errorMessage.append("ERROR: cannot find python function named \"" + call->functionName() +"\"!");
+            qDebug() << call->result().errorMessage;
             //FIXME - shouldn't we return here? (2022-01-26 FL)
         }
 
 
-        PyObject * py_args = getTupleParams(call.params());//borrowed reference
+        PyObject * py_args = getTupleParams(call->params());//borrowed reference
 
         PyObject * py_ret = NULL;
 
-        if (!call.result().error) {
+        if (!call->result().error) {
             //this is the actual python execution
             py_ret = PyObject_CallObject(py_func, py_args);//new reference
         }
 
         if (!py_ret)
-            call.result().error = true;
+            call->result().error = true;
 
-        if (!call.result().error) {
-               call.result().returnValue = parseObject(py_ret);
+        if (!call->result().error) {
+               call->result().returnValue = parseObject(py_ret);
             Py_DecRef(py_ret);
         } else {
-            call.result().errorMessage.append("NrPyCpp ERROR retrieving result from function named \"" + call.functionName() + "\"!");
+            PyErr_Print();
+            call->result().errorMessage.append("NrPyCpp ERROR retrieving result from function named \"" + call->functionName() + "\"!");
         }
 
         Py_DecRef(py_lib_mod_dict);
@@ -209,11 +225,11 @@ void PyRunner::processCall(PyFunctionCall call)
  * \brief PyRunner::trackCall will insert or update the call info during its process
  * \param call
  */
-void PyRunner::trackCall(PyFunctionCall call)
+void PyRunner::trackCall(PyFunctionCall * call)
 {
     PRINT_THREAD_INFO
     m_callsMutex.lock();
-    m_calls.insert(call.id(), call);
+    m_calls.insert(call->id(), call);
     m_callsMutex.unlock();
 }
 
@@ -225,9 +241,9 @@ void PyRunner::printCalls()
 {
     PRINT_THREAD_INFO
     m_callsMutex.lock();
-    foreach(PyFunctionCall call, m_calls)
+    foreach(PyFunctionCall *call, m_calls)
     {
-        qDebug() << call.getInfo();
+        qDebug() << call->getInfo();
     }
     m_callsMutex.unlock();
 }
@@ -239,11 +255,11 @@ void PyRunner::printCalls()
  * \param callID
  * \return
  */
-PyFunctionCall PyRunner::getCall(QUuid callID)
+PyFunctionCall * PyRunner::getCall(QUuid callID)
 {
     PRINT_THREAD_INFO
     m_callsMutex.lock();
-    PyFunctionCall returnValue = m_calls.value(callID);
+    PyFunctionCall * returnValue = m_calls.value(callID);
     m_callsMutex.unlock();
     return returnValue;
 }
@@ -255,18 +271,18 @@ PyFunctionCall PyRunner::getCall(QUuid callID)
  * \param call
  * this is called when the function ha completed its processing
  */
-void PyRunner::untrackCall(PyFunctionCall call)
+void PyRunner::untrackCall(PyFunctionCall * call)
 {
     m_callsMutex.lock();
-    m_calls.remove(call.id());
+    m_calls.remove(call->id());
     m_callsMutex.unlock();
 }
 
 
 QString PyRunner::getCallInfo(QString id)
 {
-    PyFunctionCall c = getCall(id);
-    return c.getInfo();
+    PyFunctionCall * c = getCall(id);
+    return c->getInfo();
 }
 
 
@@ -280,8 +296,8 @@ QString PyRunner::getCallInfo(QString id)
 PyFunctionCallResult PyRunner::getAsyncCallResult(QString id)
 {
     QUuid uid(id);
-    PyFunctionCall c = getCall(uid);
-    PyFunctionCallResult result = c.result();
+    PyFunctionCall * c = getCall(uid);
+    PyFunctionCallResult result = c->result();
     if (!result.endTime.isValid()) {
         qDebug() << "The call with id " << id << " seems not to have finished yet...";
     } else {
@@ -301,8 +317,8 @@ QStringList PyRunner::getAsyncCallsList()
 {
     QStringList ls;
     m_callsMutex.lock();
-    foreach (PyFunctionCall c, m_calls) {
-        ls << c.id().toString();
+    foreach (PyFunctionCall * c, m_calls) {
+        ls << c->id().toString();
     }
     m_callsMutex.unlock();
     return ls;
@@ -318,15 +334,15 @@ QStringList PyRunner::getAsyncCallsList()
 bool PyRunner::checkCall(QUuid callID)
 {
     PRINT_THREAD_INFO
-    PyFunctionCall c = getCall(callID);
+    PyFunctionCall * c = getCall(callID);
 
-    if (!c.isValid()) {
-        qDebug() << "Call has not yet been started";
+    if (!c->isValid()) {
+//        qDebug() << "Call has not yet been started";
         return false;
     }
 
-    if (!c.result().endTime.isValid()) {
-        qDebug() << "Call has not yet completed";
+    if (!c->result().endTime.isValid()) {
+//        qDebug() << "Call has not yet completed";
         return false;
     }
 
@@ -338,7 +354,7 @@ PyObject * PyRunner::getModuleDict()
 {
     if(!m_module_dict)
     {
-        loadCurrentModule();
+        //loadCurrentModule();
 
         PyObject * scriptName = PyUnicode_FromString(m_scriptFileName.toUtf8().data()); //new reference
 
@@ -418,9 +434,13 @@ void PyRunner::printPyDict(PyObject *dict)
     qDebug()<< "Dict size "<<size;
     for (int i=0; i<size; i++)
     {
-        PyObject * key = PyList_GetItem(keys, i);
+        PyObject * key = PyList_GetItem(keys, i); //Borrowed reference
         PyObject * value = PyDict_GetItem(dict, key); //Borrowed reference
-        qDebug()<<"value"<<i<<parseObject(value);
+
+        QString parsedKey = parseObject(key).toString();
+        QVariant parsedValue = parseObject(value);
+
+        qDebug()<<i <<"key"<<parsedKey<< " : value"<<parsedValue;
     }
 }
 
@@ -468,17 +488,28 @@ QVariant PyRunner::parseObject(PyObject *object)
 
         /* Python 3.9 ONLY code - we dismissed Python 2.7 */
         PyObject* str = PyUnicode_AsEncodedString(objectsRepresentation, "utf-8", "~E~");//new reference
-        const char* s = PyBytes_AsString(str);
-#if(0)
-        Py_DecRef(str);
-        PyErr_Print();
-#endif
-        QString valueString = QString(s);
-        valueString = valueString.mid(1,valueString.length()-2);
-        returnValue.setValue(valueString);
-        Py_DecRef(str);
-        PyErr_Print();
+        if(str)
+        {
+
+
+
+
+            const char* s = PyBytes_AsString(str);
+    #if(0)
+            Py_DecRef(str);
+            PyErr_Print();
+    #endif
+            QString valueString = QString(s);
+            valueString = valueString.mid(1,valueString.length()-2);
+            returnValue.setValue(valueString);
+            Py_DecRef(str);
+            PyErr_Print();
+        }else
+        {
+            returnValue.setValue(QString(""));
+        }
         Py_DecRef(objectsRepresentation);
+
     } else if(PyLong_CheckExact(object) ) {
         int value = PyLong_AsLong(object);
         returnValue.setValue(value);
@@ -517,7 +548,36 @@ QVariant PyRunner::parseObject(PyObject *object)
              list.append(iVariant);
         }
         returnValue.setValue(list);
-    } else {
+    } else if(PyDict_Check(object)) {
+        QVariantMap dict;
+
+        PyObject * keys = PyDict_Keys(object);
+        int size = static_cast<int>(PyList_Size(keys));
+        for(int i=0;i<size;i++)
+        {
+            PyObject * key = PyList_GetItem(keys, i);
+            PyObject * value = PyDict_GetItem(object, key);
+            QVariant parsedKey = parseObject(key);
+            QVariant parsedValue = parseObject(value);
+            dict.insert(parsedKey.toString(), parsedValue);
+        }
+        returnValue.setValue(dict);
+    }else if(PyModule_Check(object)) {
+        QString moduleName = PyModule_GetName(object);
+//        PyObject * moduleFileName_obj = PyModule_GetFilenameObject(object);//new reference is valid
+
+        QString moduleFileName = "";
+//        if(moduleFileName_obj){
+//            moduleFileName = parseObject(moduleFileName_obj).toString();
+//            Py_DecRef(moduleFileName_obj);
+//        }
+        QVariantMap moduleDict;
+        moduleDict.insert("name", moduleName);
+        moduleDict.insert("filename", moduleFileName);
+        returnValue.setValue(moduleDict);
+    }else if(PyType_Check(object)) {
+        returnValue.setValue(QVariant( "Type"));
+    }else {
         qWarning() << "Warning: attempt to parse unknown type" << p;
     }
 
@@ -528,10 +588,17 @@ QVariant PyRunner::parseObject(PyObject *object)
 
 void PyRunner::loadCurrentModule()
 {
+    PyGILState_STATE gstate = openCallContext();
     PyObject* sys = PyImport_ImportModule( "sys" ); //new reference
     PyObject* sys_path = PyObject_GetAttrString( sys, "path" ); //new reference
     PyObject* folder_path = PyUnicode_FromString( m_scriptFilePath.toUtf8().data() ); //new reference
-
+    PyObject* sys_modules = PyObject_GetAttrString( sys, "modules" ); //new reference
+//    printPyDict(sys_modules);
+//    printPyList(sys_path);
+    QVariantMap modules = parseObject(sys_modules).toMap();
+    m_defaultLoadedModules = modules.keys();
+    m_defaultModulePathsCount = static_cast<int>(PyList_Size(sys_path));
+    m_defaultModulesCount = static_cast<int>(PyDict_Size(sys_modules));
     //add script path to python search path
     PyList_Append( sys_path, folder_path );
 
@@ -543,33 +610,79 @@ void PyRunner::loadCurrentModule()
         Py_DecRef(dependency_path);
     }
 
-    //printPyList(sys_path);
-
     Py_DecRef(sys);
     Py_DecRef(sys_path);
     Py_DecRef(folder_path);
+    Py_DecRef(sys_modules);
+    closeCallContext(gstate);
 }
 
 
 void PyRunner::unloadCurrentModule()
 {
-    PyGILState_STATE gstate = PyGILState_Ensure();
-    //PyEval_InitThreads();
 
+//    return;
+    PyGILState_STATE gstate = openCallContext();
+    //PyEval_InitThreads();
+    PyObject* sys = PyImport_ImportModule( "sys" ); //new reference
+    PyObject* sys_path = PyObject_GetAttrString( sys, "path" ); //new reference
+    PyObject* sys_modules = PyObject_GetAttrString( sys, "modules" ); //new reference
+
+//    printPyList(sys_path);
+//    printPyDict(sys_modules);
     //unload imported paths
     QString unloadPathCommand = "sys.path.remove(\""+m_scriptFilePath+"\")";
     QString unloadModuleCommand = "del sys.modules[\""+m_scriptFileName+"\"]";
     PyRun_SimpleString("import sys");
-    PyRun_SimpleString(unloadPathCommand.toUtf8().data());
-    PyRun_SimpleString(unloadModuleCommand.toUtf8().data());
+    if (PyDict_Contains(sys_modules, PyUnicode_FromString(m_scriptFileName.toUtf8().data())))
+    {
+        PyRun_SimpleString(unloadPathCommand.toUtf8().data());
+
+        PyErr_Print();
+        //PyRun_SimpleString(unloadModuleCommand.toUtf8().data());
+        PyDict_DelItem(sys_modules,PyUnicode_FromString(m_scriptFileName.toUtf8().data()));
+        PyErr_Print();
+    }
 
     foreach (QString dependency, m_dependencies)
     {
         unloadPathCommand = "sys.path.remove(\""+dependency+"\")";
         PyRun_SimpleString(unloadPathCommand.toUtf8().data());
+        PyErr_Print();
     }
 
-    PyGILState_Release(gstate);
+    QVariantMap modules = parseObject(sys_modules).toMap();
+    for(int i=m_defaultModulesCount; i< modules.keys().size(); i++)
+    foreach (QString module, modules.keys()) {
+        if( m_defaultLoadedModules.contains(module) )
+            continue;
+
+        if (PyDict_Contains(sys_modules, PyUnicode_FromString(module.toUtf8().data())))
+        {
+//            qDebug()<<"unloading module:"<<module;
+//            unloadModuleCommand = "del sys.modules[\""+module+"\"]";
+//            PyRun_SimpleString(unloadModuleCommand.toUtf8().data());
+            PyDict_DelItem(sys_modules,PyUnicode_FromString(module.toUtf8().data()));
+            PyErr_Print();
+        }
+    }
+    QVariantList modulePaths = parseObject(sys_path).toList();
+    for(int i=m_defaultModulePathsCount; i< modulePaths.length(); i++)
+    {
+//        qDebug()<<"removing sys path:"<<modulePaths.at(i).toString();
+        unloadPathCommand = "sys.path.remove(\""+ modulePaths.at(i).toString()  +"\")";
+        PyRun_SimpleString(unloadPathCommand.toUtf8().data());
+        PyErr_Print();
+    }
+
+    PyRun_SimpleString("import gc");
+    PyRun_SimpleString("gc.collect()");
+
+    Py_DecRef(sys);
+    Py_DecRef(sys_path);
+    Py_DecRef(sys_modules);
+//    PyGILState_Release(gstate);
+    closeCallContext(gstate);
 //    PyEval_ReleaseLock();
 }
 
@@ -582,22 +695,26 @@ void PyRunner::unloadCurrentModule()
 PyFunctionCallResult PyRunner::syncCallFunction(QString functionName, QVariantList params)
 {
     PRINT_THREAD_INFO
-    PyFunctionCall call(functionName, params, true);
+    PyFunctionCall * call= new PyFunctionCall(functionName, params, true);
+
+    call->syncCallLock()->lock();
 
     //The following signal will start the execution of the call in the python thread
     //while we wait for its completion here on the app thread
     emit startCallRequestedSignal(call);
 
-    while (!checkCall(call.id())) //TODO - this should be replaces with a waitcondition
-    {
-        sleep_for_millis(100);
-    }
+    call->syncCallLock()->lock();
+
+//    while (!checkCall(call.id())) //TODO - this should be replaces with a waitcondition
+//    {
+//        sleep_for_millis(100);
+//    }
 
     //update with the result from the map
-    call = getCall(call.id());
-
+    call = getCall(call->id());
+    call->syncCallLock()->unlock();
     untrackCall(call);
-    return call.result();
+    return call->result();
 }
 
 
@@ -610,11 +727,11 @@ PyFunctionCallResult PyRunner::syncCallFunction(QString functionName, QVariantLi
 QString PyRunner::asyncCallFunction(QString functionName, QVariantList params)
 {
     PRINT_THREAD_INFO
-    PyFunctionCall call(functionName, params, false);
+    PyFunctionCall * call = new PyFunctionCall(functionName, params, false);
 
     //this will signal to start execution of the specified call on the python thread
     emit startCallRequestedSignal(call);
-    return call.id().toString();
+    return call->id().toString();
 }
 
 
@@ -628,13 +745,15 @@ QString PyRunner::asyncCallFunction(QString functionName, QVariantList params)
  * The function will start by setting the startTime and then upserting the stored
  * value in the tracking map with trackCall() then will start the processing with processCall().
  */
-void PyRunner::onStartCallRequest(PyFunctionCall call)
+void PyRunner::onStartCallRequest(PyFunctionCall * call)
 {
     PRINT_THREAD_INFO
     try {
-        call.result().startTime = QDateTime::currentDateTime();
+        call->result().startTime = QDateTime::currentDateTime();
         trackCall(call);
         processCall(call);
+        if(call->isSync())
+            call->syncCallLock()->unlock();
     } catch (...)
     {
         // log errors
@@ -649,12 +768,17 @@ void PyRunner::onStartCallRequest(PyFunctionCall call)
  * \param call the call that has just completed
  * \note this is only called within processCall() so maybe it could be refactored in to that method
  */
-void PyRunner::handleCompletedCall(PyFunctionCall call)
+void PyRunner::handleCompletedCall(PyFunctionCall * call)
 {
     PRINT_THREAD_INFO
-    call.result().endTime = QDateTime::currentDateTime();
+    call->result().endTime = QDateTime::currentDateTime();
     trackCall(call);
-    if (!call.isSync()) {
-        emit callCompletedSignal(call.id().toString());
+    if (!call->isSync()) {
+        emit callCompletedSignal(call->id().toString());
     }
+}
+
+void PyRunner::loadStuff()
+{
+    loadCurrentModule();
 }

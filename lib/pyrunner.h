@@ -43,19 +43,23 @@ class PyRunner : public QObject
     QString m_scriptFileName;
     QString m_scriptFilePath;
     QThread * m_pPythonThread;
-    void processCall(PyFunctionCall call);
+    void processCall(PyFunctionCall * call);
 
-    QHash<QUuid, PyFunctionCall> m_calls;
+    QHash<QUuid, PyFunctionCall*> m_calls;
     QMutex m_callsMutex;
-    void trackCall(PyFunctionCall call);
-    PyFunctionCall getCall(QUuid callID);
-    void untrackCall(PyFunctionCall call);
+    void trackCall(PyFunctionCall * call);
+    PyFunctionCall * getCall(QUuid callID);
+    void untrackCall(PyFunctionCall * call);
     bool checkCall(QUuid callID);
 
     void loadCurrentModule();
     void unloadCurrentModule();
     PyObject * getModuleDict();
     PyObject * m_module_dict;
+    int m_defaultModulesCount;
+    int m_defaultModulePathsCount;
+    QStringList m_defaultLoadedModules;
+
 
     void setup();
 
@@ -92,18 +96,21 @@ public:
     //END_WRAPPER_METHODS
 
 private:
-    void handleCompletedCall(PyFunctionCall call);
+    void handleCompletedCall(PyFunctionCall * call);
 
 signals:
     void tearDownSignal(); //FIXME - WTF? this is never emitted (2022-02-01 FL)
-    void startCallRequestedSignal(PyFunctionCall call);
+    void startCallRequestedSignal(PyFunctionCall * call);
     //START_SIGNAL_METHODS
     void callCompletedSignal(QString);
     //END_SIGNAL_METHODS
 
 private slots:
+    void loadStuff();
     void tearDown();
-    void onStartCallRequest(PyFunctionCall call);
+    void onStartCallRequest(PyFunctionCall * call);
 };
+
+//Q_DECLARE_METATYPE(PyRunner)
 
 #endif // PYRUNNER_H
