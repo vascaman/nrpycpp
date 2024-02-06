@@ -108,6 +108,7 @@ TARGET = $$join(TARGET,,bin/,)
 #gcc compiler quirks
 !win32 {
     TARGET = $$join(TARGET,,$$BUILDTYPE/,)
+    VERSION = $$NRPYCPP_VERSION
 }
 
 
