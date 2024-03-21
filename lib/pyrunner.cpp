@@ -27,9 +27,8 @@ PyRunner::~PyRunner()
      * Thread will self destroy when the finished() signal arrives
     */
 
-    PRINT_THREAD_INFO
-
-    emit tearDownSignal();
+    PRINT_THREAD_INFO    
+    unloadInterpreter();
     m_pPythonThread->exit();
     //block and wait for teardown to be completed
     Py_DecRef(m_module_dict);
@@ -39,6 +38,7 @@ PyRunner::~PyRunner()
 PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
 {
     PRINT_THREAD_INFO
+    m_currentModuleLoaded = false;
     m_syntaxError = false;
     m_sourceFilePy = scriptPath;
     m_dependencies = dependecies;
@@ -50,10 +50,7 @@ PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
     m_pPythonThread->setObjectName("NrPyCpp-" + QFileInfo(scriptPath).completeBaseName() + QUuid::createUuid().toString());
     m_pPythonThread->start();
 
-//    connect(m_pPythonThread, &QThread::finished, this, &PyRunner::tearDown, Qt::BlockingQueuedConnection);
-
     connect(this, &PyRunner::startCallRequestedSignal, this, &PyRunner::onStartCallRequest);
-    connect(this, &PyRunner::tearDownSignal, this, &PyRunner::tearDown, Qt::BlockingQueuedConnection);
 
     this->moveToThread(m_pPythonThread);
 
@@ -81,6 +78,7 @@ void PyRunner::setup()
 
         m_scriptFileName = scriptFileInfo.completeBaseName();
         m_scriptFilePath = scriptFileInfo.dir().path();
+        loadInterpreter();
     }
     catch(...)
     {
@@ -90,13 +88,6 @@ void PyRunner::setup()
         qCritical() << "[ERROR] cannot setup pyrunner";
         PyErr_Print();
     }
-}
-
-
-void PyRunner::tearDown()
-{
-    PRINT_THREAD_INFO
-    unloadInterpreter();
 }
 
 
@@ -112,7 +103,7 @@ void PyRunner::processCall(PyFunctionCall call)
     }
 
     try {
-        loadInterpreter();
+        PyEval_RestoreThread(m_interpreterState);
         loadCurrentModule();
         PyObject * py_lib_mod_dict = getModuleDict(); //borrowed reference of global variable
         if ( !py_lib_mod_dict ) {
@@ -181,7 +172,7 @@ void PyRunner::processCall(PyFunctionCall call)
         Py_DecRef(py_function_name);
         Py_DecRef(py_func);
         Py_DecRef(py_args);
-
+        PyEval_SaveThread();
         handleCompletedCall(call);
     } catch (...) {
         //qDebug() << e.what();
@@ -514,6 +505,11 @@ QVariant PyRunner::parseObject(PyObject *object)
 
 void PyRunner::loadCurrentModule()
 {
+    if (m_currentModuleLoaded)
+    {
+        return;
+    }
+
     PyObject* sys = PyImport_ImportModule( "sys" ); //new reference
     PyObject* sys_path = PyObject_GetAttrString( sys, "path" ); //new reference
     PyObject* folder_path = PyUnicode_FromString( m_scriptFilePath.toUtf8().data() ); //new reference
@@ -534,6 +530,8 @@ void PyRunner::loadCurrentModule()
     Py_DecRef(sys);
     Py_DecRef(sys_path);
     Py_DecRef(folder_path);
+
+    m_currentModuleLoaded = true;
 }
 
 
@@ -549,6 +547,7 @@ void PyRunner::loadInterpreter()
         PyErr_Print();
         return;
     }
+    PyEval_SaveThread();
 }
 
 
@@ -558,7 +557,8 @@ void PyRunner::unloadInterpreter()
         return;
 
     //DEINIT STARTS
-    PyThreadState_Swap(m_interpreterState);
+    PyEval_RestoreThread(m_interpreterState);
+    PyThreadState_Clear(m_interpreterState);
     Py_EndInterpreter(m_interpreterState);
     m_interpreterState = NULL;
 }
