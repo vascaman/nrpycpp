@@ -558,8 +558,16 @@ void PyRunner::unloadInterpreter()
 
     //DEINIT STARTS
     PyEval_RestoreThread(m_interpreterState);
-    PyThreadState_Clear(m_interpreterState);
-    Py_EndInterpreter(m_interpreterState);
+    if (PY_VERSION_HEX >= 0x03100000)
+    {
+        PyThreadState_Clear(m_interpreterState);
+        Py_EndInterpreter(m_interpreterState);
+    }
+    else
+    {
+        PyInterpreterState_Clear(m_interpreterState->interp);
+        PyInterpreterState_Delete(m_interpreterState->interp);
+    }
     m_interpreterState = NULL;
 }
 
