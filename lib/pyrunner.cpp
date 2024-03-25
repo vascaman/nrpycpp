@@ -29,14 +29,21 @@ PyRunner::~PyRunner()
 
     PRINT_THREAD_INFO    
     unloadInterpreter();
-    m_pPythonThread->exit();
+//    m_pPythonThread->exit();
+    m_pPythonThread->terminate();
+    m_pPythonThread->wait(5000);
     //block and wait for teardown to be completed
     Py_DecRef(m_module_dict);
+//    m_pPythonThread->deleteLater();
+    delete m_pPythonThread;
 }
 
 
 PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
 {
+//    qDebug()<<PY_MAJOR_VERSION;
+//    qDebug()<<PY_MINOR_VERSION;
+//    qDebug()<<PY_MICRO_VERSION;
     PRINT_THREAD_INFO
     m_currentModuleLoaded = false;
     m_syntaxError = false;
@@ -51,7 +58,7 @@ PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
     m_pPythonThread->start();
 
     connect(this, &PyRunner::startCallRequestedSignal, this, &PyRunner::onStartCallRequest);
-
+    //connect(m_pPythonThread, &QThread::finished, m_pPythonThread, &QThread::deleteLater);
     this->moveToThread(m_pPythonThread);
 
     PRINT_THREAD_INFO
@@ -103,7 +110,7 @@ void PyRunner::processCall(PyFunctionCall call)
     }
 
     try {
-        PyEval_RestoreThread(m_interpreterState);
+        PyEval_RestoreThread(m_interpreterState);// no reference
         loadCurrentModule();
         PyObject * py_lib_mod_dict = getModuleDict(); //borrowed reference of global variable
         if ( !py_lib_mod_dict ) {
@@ -120,16 +127,17 @@ void PyRunner::processCall(PyFunctionCall call)
             qCritical() << "CRITICAL - cannot use Python module dictionary...";
         }
 
-        char * p = new char[call.functionName().length() + 1];
-        QSharedPointer<char> function = QSharedPointer<char>(p);
-        strcpy(function.data(), call.functionName().toUtf8().constData());
+        //char * p = new char[call.functionName().length() + 1];
+        //QSharedPointer<char> function = QSharedPointer<char>(p);
+        //strcpy(function.data(), call.functionName().toUtf8().constData());
 
         //get function name
         PyObject * py_function_name = NULL;
 
         //PyString_FromString
         if (!call.result().error)
-            py_function_name = PyUnicode_FromString(function.data()); //new reference
+            py_function_name = PyUnicode_FromString(call.functionName().toUtf8().data()); //new reference
+            //py_function_name = PyUnicode_FromString(function.data()); //new reference
 
         if (!py_function_name)
             call.result().error = true;
@@ -457,7 +465,7 @@ QVariant PyRunner::parseObject(PyObject *object)
         PyErr_Print();
         Py_DecRef(objectsRepresentation);
     } else if(PyLong_CheckExact(object) ) {
-        int value = PyLong_AsLong(object);
+        int value = PyLong_AsLong(object);//no reference
         returnValue.setValue(value);
     } else if(PyBool_Check(object) ) {
         int intbool = PyObject_IsTrue(object);
@@ -557,8 +565,9 @@ void PyRunner::unloadInterpreter()
         return;
 
     //DEINIT STARTS
-    PyEval_RestoreThread(m_interpreterState);
-    if (PY_VERSION_HEX >= 0x03100000)
+    PyEval_RestoreThread(m_interpreterState);//no reference
+    if (PY_MAJOR_VERSION >= 3 &&
+        PY_MINOR_VERSION >= 10)
     {
         PyThreadState_Clear(m_interpreterState);
         Py_EndInterpreter(m_interpreterState);
