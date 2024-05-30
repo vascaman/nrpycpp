@@ -9,7 +9,7 @@
 #PYTHON_INCLUDE_PATH = /usr/include/python$${PYTHON_VERSION}
 
 #xcode usual defaults (the 2.7 distributed on every mac as runtime lacks build libraries)
-#PYTHON_VERSION=3.8
+#PYTHON_VERSION=3.9
 #PYTHON_LIB_PATH     = /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/$${PYTHON_VERSION}/lib/
 #PYTHON_INCLUDE_PATH = /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/$${PYTHON_VERSION}/Headers/
 

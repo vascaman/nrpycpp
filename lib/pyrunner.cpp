@@ -265,7 +265,8 @@ void PyRunner::untrackCall(PyFunctionCall call)
 
 QString PyRunner::getCallInfo(QString id)
 {
-    PyFunctionCall c = getCall(id);
+    QUuid uid(id);
+    PyFunctionCall c = getCall(uid);
     return c.getInfo();
 }
 
@@ -321,12 +322,14 @@ bool PyRunner::checkCall(QUuid callID)
     PyFunctionCall c = getCall(callID);
 
     if (!c.isValid()) {
-        qDebug() << "Call has not yet been started";
+        qDebug() << "Call with id " << callID << " has not yet been started";
         return false;
     }
 
+    //qDebug() << "Checking call with id " << callID << " for completion...";
+
     if (!c.result().endTime.isValid()) {
-        qDebug() << "Call has not yet completed";
+        qDebug() << "Call with id " << callID << " has not yet completed";
         return false;
     }
 
