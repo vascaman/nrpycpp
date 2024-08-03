@@ -1,0 +1,35 @@
+{
+	"source_lib":
+	{
+		"lib_name":"NrPyCallbacks",
+		"lib_include_dir":"../lib",
+		"lib_dir":"../lib/last_build",
+		"lib_bin":"libnrPyCpp.so"
+	},
+	"pyside_config":
+	{
+		"pyside_header":"NrPyCallbacks.h",
+		"pyside_typesystem_file":"NrPyCallbacks.xml",
+		"pyside_typesystems_path":"./deps/Pyside/linux64_Ubuntu_20.04/PySide-qt6.5-python3.10/PySide6/typesystems",
+		"pyside_include_dir":"./deps/Pyside/linux64_Ubuntu_20.04/PySide-qt6.5-python3.10/PySide6/lib/include",
+		"pyside_shared_lib":"./deps/Pyside/linux64_Ubuntu_20.04/PySide-qt6.5-python3.10/PySide6/lib/libpyside6.abi3.so.6.5.0"
+	},
+	"python":
+	{
+		"python_interpeter":"python3.10",
+		"python_include_dir":"/usr/include/python3.10/"
+	},
+	"shiboken":
+	{
+		"shiboken_module_path":"./deps/Pyside/linux64_Ubuntu_20.04/PySide-qt6.5-python3.10/shiboken6/dist-packages",
+		"shiboken_include_dir":"./deps/Pyside/linux64_Ubuntu_20.04/PySide-qt6.5-python3.10/shiboken6/lib/include",
+		"shiboken_shared_lib":"./deps/Pyside/linux64_Ubuntu_20.04/PySide-qt6.5-python3.10/shiboken6/lib/libshiboken6.abi3.so.6.5.0",
+		"shiboken_generator_path":"./deps/Pyside/linux64_Ubuntu_20.04/PySide-qt6.5-python3.10/shiboken6/bin",
+		"shiboken_bin":"shiboken6"
+	},
+	"qt":
+	{
+		"qt_include_dir":"/home/netresults.wintranet/aru/Qt/6.5.0/gcc_64/include",
+		"qt_lib_dir":"/home/netresults.wintranet/aru/Qt/6.5.0/gcc_64/lib"
+	}
+}

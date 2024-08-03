@@ -43,7 +43,7 @@ public:
         m_syncCallLock = rhs.syncCallLock();
     }
     PyFunctionCall() { m_valid = false; }; //needed to use in QHash / QMap
-    ~PyFunctionCall(){  }
+    ~PyFunctionCall(){ delete m_syncCallLock; }
     PyFunctionCallResult& result() { return m_CallResult; }
     QUuid id() const { return m_CallID; }
     QString functionName() const { return m_functionName; }

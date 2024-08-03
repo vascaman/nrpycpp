@@ -7,6 +7,28 @@ PyEnvironment::~PyEnvironment()
     qDebug() << "PyEnvironment dtor";
 }
 
+PyRunner* PyEnvironment::getRunner(QString runnerId)
+{
+    m_runnersLock.lock();
+    PyRunner * runner = m_runners.value(runnerId);
+    m_runnersLock.unlock();
+    return runner;
+}
+
+void PyEnvironment::trackRunner(QString runnerId, PyRunner *runner)
+{
+    m_runnersLock.lock();
+    m_runners.insert(runnerId, runner);
+    m_runnersLock.unlock();
+}
+
+void PyEnvironment::untrackRunner(QString runnerId)
+{
+    m_runnersLock.lock();
+    m_runners.remove(runnerId);
+    m_runnersLock.unlock();
+}
+
 
 bool PyEnvironment::getSkipFinalize() const
 {
@@ -58,10 +80,10 @@ bool PyEnvironment::stop()
         try {
             //We need to restore thread state otherwise we have a crash
             PyEval_RestoreThread(m_pPyThreadState);
-            PyErr_Print();
+            //PyErr_Print();
             if(!m_skipFinalize)
             {
-                PyErr_Print();
+                //PyErr_Print();
                 int result = Py_FinalizeEx();
                 qDebug()<<"finalized ="<< result;
 

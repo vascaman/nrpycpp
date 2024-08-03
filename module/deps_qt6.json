@@ -1,0 +1,22 @@
+{
+  "deps": [
+    {
+      "name": "Pyside",
+      "rel_dest_dir": "deps/Pyside",
+      "proto": "artifact",
+      "url": "https://nrreleases.jfrog.io/nrreleases/atena",
+      "module": "libs/Pyside",
+      "branch_or_tag": "master",
+      "unzip": "true",
+      "runtime_dep": "true",
+      "version": {
+    	      "default": "6.5.0",
+	      "win32_vs2015": {
+		      "platform": "win32_vs2017",
+		      "version": "3.99.3"
+	      }
+      } 
+    }
+  ]
+}
+

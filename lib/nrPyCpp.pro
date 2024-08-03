@@ -41,6 +41,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         pyenvironment.cpp \
         pyrunner.cpp \
+        PyCallback.cpp \
         PyRunnerQt.cpp
 
 
@@ -52,6 +53,7 @@ message("nrPyCpp LIBS = $${LIBS}")
 
 HEADERS += \
     PyCall.h \
+    PyCallback.h \
     pyenvironment.h \
     pyrunner.h \
     PyRunnerQt.h \

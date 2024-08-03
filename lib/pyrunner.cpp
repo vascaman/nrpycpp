@@ -10,6 +10,7 @@
 #include <QDebug>
 #include <QSharedPointer>
 #include <QVariant>
+#include <pyenvironment.h>
 
 #include "sleep_header.h"
 
@@ -36,6 +37,15 @@ PyRunner::~PyRunner()
 //    delete m_pPythonThread;
 //    tearDown();
     Py_DecRef(m_module_dict);
+    //qDebug()<<Py_REFCNT(m_module_dict);
+    while(m_calls.count()>0)
+    {
+        PyFunctionCall * call =  m_calls.values().last();
+        m_calls.remove(call->id());
+        delete call;
+    }
+    PyEnvironment::getInstance().untrackRunner(m_runnerId);
+    qDebug() << "PyRunner dtor done";
 }
 
 
@@ -48,10 +58,12 @@ PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
     m_module_dict = NULL;
 
     qRegisterMetaType<PyFunctionCall>("PyFunctionCall");
+    qRegisterMetaType<PyRunner>("PyRunner");
 
+    m_runnerId = "NrPyCpp-" + QFileInfo(scriptPath).completeBaseName() + QUuid::createUuid().toString();
     m_pPythonThread = new QThread();
-    m_pPythonThread->setObjectName("NrPyCpp-" + QFileInfo(scriptPath).completeBaseName() + QUuid::createUuid().toString());
-
+    m_pPythonThread->setObjectName(m_runnerId);
+    PyEnvironment::getInstance().trackRunner(m_runnerId, this);
 
 //    connect(m_pPythonThread, &QThread::finished, m_pPythonThread, &QThread::deleteLater);
     connect(m_pPythonThread, &QThread::finished, this, &PyRunner::tearDown);
@@ -109,6 +121,8 @@ void PyRunner::tearDown()
 //    m_pPythonThread->wait();
 //    m_pPythonThread->deleteLater();
     unloadCurrentModule();
+    // PyEval_RestoreThread(m_pPyThreadState);
+    // Py_Finalize();
 }
 
 
@@ -128,6 +142,12 @@ void PyRunner::closeCallContext(PyGILState_STATE state)
 }
 
 
+QString PyRunner::runnerId() const
+{
+    return m_runnerId;
+}
+
+
 void PyRunner::processCall(PyFunctionCall * call)
 {
     PRINT_THREAD_INFO
@@ -142,11 +162,14 @@ void PyRunner::processCall(PyFunctionCall * call)
     try {
         PyGILState_STATE gstate = openCallContext();
 
+
+
         PyObject * py_lib_mod_dict = getModuleDict(); //borrowed reference of global variable
         if ( !py_lib_mod_dict ) {
             //FIXME - log error and return (2022-01-26 FL)
             qCritical() << "CRITICAL - cannot get Python module dictionary...";
         }
+
         Py_IncRef(py_lib_mod_dict);
 
         if (!py_lib_mod_dict)
@@ -156,6 +179,8 @@ void PyRunner::processCall(PyFunctionCall * call)
             //FIXME - should not we return an error? (2022-01-26 FL)
             qCritical() << "CRITICAL - cannot use Python module dictionary...";
         }
+
+
 
         char * p = new char[call->functionName().length() + 1];
         QSharedPointer<char> function = QSharedPointer<char>(p);
@@ -171,11 +196,13 @@ void PyRunner::processCall(PyFunctionCall * call)
         if (!py_function_name)
             call->result().error = true;
 
+
+
         //get function object
         PyObject * py_func = NULL;
         if (!call->result().error) {
             py_func = PyDict_GetItem(py_lib_mod_dict, py_function_name); //borrowed reference
-            Py_IncRef(py_func);
+            Py_IncRef(py_func);//maybe we can remove this
         }
 
         if (!py_func) {
@@ -186,14 +213,16 @@ void PyRunner::processCall(PyFunctionCall * call)
         }
 
 
-        PyObject * py_args = getTupleParams(call->params());//borrowed reference
+        PyObject * py_args = getTupleParams(call->params());//New reference
 
         PyObject * py_ret = NULL;
 
         if (!call->result().error) {
             //this is the actual python execution
-            py_ret = PyObject_CallObject(py_func, py_args);//new reference
+            py_ret = PyObject_CallObject(py_func, py_args);//New reference
         }
+
+
 
         if (!py_ret)
             call->result().error = true;
@@ -276,12 +305,13 @@ void PyRunner::untrackCall(PyFunctionCall * call)
     m_callsMutex.lock();
     m_calls.remove(call->id());
     m_callsMutex.unlock();
+    delete call;
 }
 
 
 QString PyRunner::getCallInfo(QString id)
 {
-    PyFunctionCall * c = getCall(id);
+    PyFunctionCall * c = getCall(QUuid(id));
     return c->getInfo();
 }
 
@@ -324,6 +354,7 @@ QStringList PyRunner::getAsyncCallsList()
     return ls;
 }
 
+
 /*!
  * \internal
  * \brief PyRunner::checkCall verifies if the returning call has the callID requested
@@ -356,10 +387,10 @@ PyObject * PyRunner::getModuleDict()
     {
         //loadCurrentModule();
 
-        PyObject * scriptName = PyUnicode_FromString(m_scriptFileName.toUtf8().data()); //new reference
+        PyObject * scriptName = PyUnicode_FromString(qPrintable(m_scriptFileName)); //new reference
 
         //script meta data
-        PyObject * m_py_lib_mod = PyImport_Import(scriptName); //new reference
+        PyObject * m_py_lib_mod = PyImport_ImportModule("PyCallbacks_test"); //new reference
 
         if(!m_py_lib_mod)
         {
@@ -371,6 +402,7 @@ PyObject * PyRunner::getModuleDict()
 
         m_module_dict = PyModule_GetDict(m_py_lib_mod);//borrowed reference
 
+        //this one leaks
         Py_IncRef(m_module_dict);
 
         if(!m_module_dict)
@@ -383,6 +415,10 @@ PyObject * PyRunner::getModuleDict()
 //        printPyDict(m_module_dict);
         Py_DecRef(m_py_lib_mod);
         Py_DecRef(scriptName);
+
+        //sets pyrunnerId
+        // QString setPyRunnerIdCmd = "__pyrunnerId = \""+m_runnerId+"\"";
+        // PyRun_SimpleString(qPrintable(setPyRunnerIdCmd));
     }
 
     return  m_module_dict;
@@ -395,7 +431,7 @@ PyObject * PyRunner::getModuleDict()
  * \param params
  * \return
  */
-PyObject *PyRunner::getTupleParams(QVariantList params)//borrowed reference (WHICH REF? FL)
+PyObject *PyRunner::getTupleParams(QVariantList params)//New reference
 {
     PRINT_THREAD_INFO
     if(params.size()==0) {
@@ -404,22 +440,46 @@ PyObject *PyRunner::getTupleParams(QVariantList params)//borrowed reference (WHI
 
     PyErr_Print();//if you remove this, python >3 stops working
 
-    PyObject *tup = PyTuple_New(params.size());
+    PyObject *tup = PyTuple_New(params.size());//New Reference
     for (int i = 0; i < params.size(); i++) {
-        if (params[i].type() == QVariant::String) {
-            PyTuple_SET_ITEM(tup, i, PyUnicode_FromString(params[i].toString().toStdString().c_str()));
-        } else if (params[i].type() == QVariant::Int || params[i].type() == QVariant::LongLong) {
-           PyTuple_SET_ITEM(tup, i, PyLong_FromLong(params[i].toLongLong()));
-        } else if (params[i].type() == QVariant::UInt || params[i].type() == QVariant::ULongLong) {
-            PyTuple_SET_ITEM(tup, i, PyLong_FromLong(params[i].toULongLong()));
-        } else if (params[i].type() == QVariant::Double) {
-            PyTuple_SET_ITEM(tup, i, PyFloat_FromDouble(params[i].toDouble()));
-        } else if (params[i].type() == QVariant::Bool) {
-            PyTuple_SET_ITEM(tup, i, PyBool_FromLong(params[i].toInt())); //FIXME - this conversion is flaky
-        } else if(params[i].type()==QVariant::ByteArray) {
+        if (params[i].typeId() == QVariant::String)
+        {
+            PyObject * stringValue = PyUnicode_FromString(qPrintable(params[i].toString())); //new reference
+            PyTuple_SET_ITEM(tup, i, stringValue);
+            // Note that PyTuple_SET_ITEM steals the reference we get from PyLong_FromLong.
+        } else if (params[i].typeId() == QVariant::Int || params[i].type() == QVariant::LongLong)
+        {
+            PyObject * longValue = PyLong_FromLong(params[i].toLongLong()); //new reference
+            PyTuple_SET_ITEM(tup, i, longValue);
+            // Note that PyTuple_SET_ITEM steals the reference we get from PyLong_FromLong.
+        } else if (params[i].typeId() == QVariant::UInt || params[i].type() == QVariant::ULongLong)
+        {
+            PyObject * longValue = PyLong_FromLong(params[i].toLongLong()); //new reference
+            PyTuple_SET_ITEM(tup, i, longValue);
+            // Note that PyTuple_SET_ITEM steals the reference we get from PyLong_FromLong.
+        } else if (params[i].typeId() == QVariant::Double)
+        {
+            PyObject * floatValue = PyFloat_FromDouble(params[i].toDouble()); //new reference
+            PyTuple_SET_ITEM(tup, i, floatValue);
+            // Note that PyTuple_SET_ITEM steals the reference we get from PyLong_FromLong.
+        } else if (params[i].typeId() == QVariant::Bool)
+        {
+            PyObject * boolValue = PyBool_FromLong(params[i].toInt()); //new reference
+            PyTuple_SET_ITEM(tup, i, boolValue);
+            // Note that PyTuple_SET_ITEM steals the reference we get from PyLong_FromLong.
+            // PyTuple_SET_ITEM(tup, i, PyBool_FromLong(params[i].toInt())); //FIXME - this conversion is flaky
+        } else if(params[i].typeId()==QVariant::ByteArray)
+        {
             //PyObject * bytesParam = Py_BuildValue("y#", params[i].toByteArray().constData(),params[i].toByteArray().size() -1 );
             PyObject * bytesParam = PyBytes_FromStringAndSize(params[i].toByteArray().constData(), params[i].toByteArray().size());
             PyTuple_SET_ITEM(tup, i, bytesParam);
+            // Note that PyTuple_SET_ITEM steals the reference we get from PyLong_FromLong.
+        }else
+        {
+            // PyObject * myrunner = PyObject_New(QObject, NULL);
+            qDebug()<<"CANNOT PARSE TYPE"<<params[i].typeId();
+            qDebug()<<"CANNOT PARSE TYPE"<<params[i].metaType();
+            qDebug()<<"CANNOT PARSE TYPE"<<params[i].typeName();
         }
         // Note that PyTuple_SET_ITEM steals the reference we get from PyLong_FromLong.
     }
@@ -429,7 +489,7 @@ PyObject *PyRunner::getTupleParams(QVariantList params)//borrowed reference (WHI
 
 void PyRunner::printPyDict(PyObject *dict)
 {
-    PyObject * keys = PyDict_Keys(dict);
+    PyObject * keys = PyDict_Keys(dict); //New Reference
     int size = static_cast<int>(PyList_Size(keys));
     qDebug()<< "Dict size "<<size;
     for (int i=0; i<size; i++)
@@ -442,6 +502,7 @@ void PyRunner::printPyDict(PyObject *dict)
 
         qDebug()<<i <<"key"<<parsedKey<< " : value"<<parsedValue;
     }
+    Py_DecRef(keys);
 }
 
 
@@ -490,15 +551,7 @@ QVariant PyRunner::parseObject(PyObject *object)
         PyObject* str = PyUnicode_AsEncodedString(objectsRepresentation, "utf-8", "~E~");//new reference
         if(str)
         {
-
-
-
-
             const char* s = PyBytes_AsString(str);
-    #if(0)
-            Py_DecRef(str);
-            PyErr_Print();
-    #endif
             QString valueString = QString(s);
             valueString = valueString.mid(1,valueString.length()-2);
             returnValue.setValue(valueString);
@@ -543,7 +596,7 @@ QVariant PyRunner::parseObject(PyObject *object)
         int size = PyList_Size(object);
         for(int i=0;i<size;i++)
         {
-             PyObject*iObject = PyList_GetItem(object, i);
+             PyObject*iObject = PyList_GetItem(object, i); //Borrowed reference
              QVariant iVariant = parseObject(iObject);
              list.append(iVariant);
         }
@@ -551,16 +604,17 @@ QVariant PyRunner::parseObject(PyObject *object)
     } else if(PyDict_Check(object)) {
         QVariantMap dict;
 
-        PyObject * keys = PyDict_Keys(object);
+        PyObject * keys = PyDict_Keys(object); //New Reference
         int size = static_cast<int>(PyList_Size(keys));
         for(int i=0;i<size;i++)
         {
-            PyObject * key = PyList_GetItem(keys, i);
-            PyObject * value = PyDict_GetItem(object, key);
+            PyObject * key = PyList_GetItem(keys, i); //Borrowed reference
+            PyObject * value = PyDict_GetItem(object, key); //Borrowed reference
             QVariant parsedKey = parseObject(key);
             QVariant parsedValue = parseObject(value);
             dict.insert(parsedKey.toString(), parsedValue);
         }
+        Py_DecRef(keys);
         returnValue.setValue(dict);
     }else if(PyModule_Check(object)) {
         QString moduleName = PyModule_GetName(object);
@@ -588,10 +642,12 @@ QVariant PyRunner::parseObject(PyObject *object)
 
 void PyRunner::loadCurrentModule()
 {
+    // Py_Initialize();
+    // m_pPyThreadState = PyEval_SaveThread();
     PyGILState_STATE gstate = openCallContext();
     PyObject* sys = PyImport_ImportModule( "sys" ); //new reference
     PyObject* sys_path = PyObject_GetAttrString( sys, "path" ); //new reference
-    PyObject* folder_path = PyUnicode_FromString( m_scriptFilePath.toUtf8().data() ); //new reference
+    PyObject* folder_path = PyUnicode_FromString( qPrintable(m_scriptFilePath) ); //new reference
     PyObject* sys_modules = PyObject_GetAttrString( sys, "modules" ); //new reference
 //    printPyDict(sys_modules);
 //    printPyList(sys_path);
@@ -605,7 +661,7 @@ void PyRunner::loadCurrentModule()
     //add dependecies path to python search path
     foreach (QString dependecy, m_dependencies)
     {
-        PyObject* dependency_path = PyUnicode_FromString(dependecy.toUtf8().data());//new reference
+        PyObject* dependency_path = PyUnicode_FromString(qPrintable(dependecy));//new reference
         PyList_Append( sys_path, dependency_path);
         Py_DecRef(dependency_path);
     }
@@ -634,50 +690,49 @@ void PyRunner::unloadCurrentModule()
     QString unloadPathCommand = "sys.path.remove(\""+m_scriptFilePath+"\")";
     QString unloadModuleCommand = "del sys.modules[\""+m_scriptFileName+"\"]";
     PyRun_SimpleString("import sys");
-    if (PyDict_Contains(sys_modules, PyUnicode_FromString(m_scriptFileName.toUtf8().data())))
+    PyObject* scriptFileName = PyUnicode_FromString(qPrintable(m_scriptFileName));//new reference
+    if (PyDict_Contains(sys_modules, scriptFileName))
     {
-        PyRun_SimpleString(unloadPathCommand.toUtf8().data());
+        PyRun_SimpleString(qPrintable(unloadPathCommand));
 
         PyErr_Print();
         //PyRun_SimpleString(unloadModuleCommand.toUtf8().data());
-        PyDict_DelItem(sys_modules,PyUnicode_FromString(m_scriptFileName.toUtf8().data()));
+        PyDict_DelItem(sys_modules,scriptFileName);
         PyErr_Print();
     }
 
     foreach (QString dependency, m_dependencies)
     {
         unloadPathCommand = "sys.path.remove(\""+dependency+"\")";
-        PyRun_SimpleString(unloadPathCommand.toUtf8().data());
+        PyRun_SimpleString(qPrintable(unloadPathCommand));
         PyErr_Print();
     }
 
     QVariantMap modules = parseObject(sys_modules).toMap();
-    for(int i=m_defaultModulesCount; i< modules.keys().size(); i++)
+    //for(int i=m_defaultModulesCount; i< modules.keys().size(); i++)
     foreach (QString module, modules.keys()) {
         if( m_defaultLoadedModules.contains(module) )
             continue;
-
-        if (PyDict_Contains(sys_modules, PyUnicode_FromString(module.toUtf8().data())))
+        PyObject * moduleName = PyUnicode_FromString(qPrintable(module));//new reference
+        if ( PyDict_Contains(sys_modules, moduleName) )
         {
-//            qDebug()<<"unloading module:"<<module;
-//            unloadModuleCommand = "del sys.modules[\""+module+"\"]";
-//            PyRun_SimpleString(unloadModuleCommand.toUtf8().data());
-            PyDict_DelItem(sys_modules,PyUnicode_FromString(module.toUtf8().data()));
+            PyDict_DelItem(sys_modules, moduleName);
             PyErr_Print();
         }
+        Py_DecRef(moduleName);
     }
     QVariantList modulePaths = parseObject(sys_path).toList();
     for(int i=m_defaultModulePathsCount; i< modulePaths.length(); i++)
     {
-//        qDebug()<<"removing sys path:"<<modulePaths.at(i).toString();
         unloadPathCommand = "sys.path.remove(\""+ modulePaths.at(i).toString()  +"\")";
         PyRun_SimpleString(unloadPathCommand.toUtf8().data());
         PyErr_Print();
     }
 
-    PyRun_SimpleString("import gc");
-    PyRun_SimpleString("gc.collect()");
+    // PyRun_SimpleString("import gc");
+    // PyRun_SimpleString("gc.collect()");
 
+    Py_DecRef(scriptFileName);
     Py_DecRef(sys);
     Py_DecRef(sys_path);
     Py_DecRef(sys_modules);
@@ -713,8 +768,9 @@ PyFunctionCallResult PyRunner::syncCallFunction(QString functionName, QVariantLi
     //update with the result from the map
     call = getCall(call->id());
     call->syncCallLock()->unlock();
+    PyFunctionCallResult result = call->result();
     untrackCall(call);
-    return call->result();
+    return result;
 }
 
 
@@ -781,4 +837,10 @@ void PyRunner::handleCompletedCall(PyFunctionCall * call)
 void PyRunner::loadStuff()
 {
     loadCurrentModule();
+}
+
+void PyRunner::sendMessage(QString msg)
+{
+    //qDebug()<<"received message"<<msg;
+    emit messageReceived(msg);
 }

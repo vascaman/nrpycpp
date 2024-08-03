@@ -26,7 +26,6 @@
 #pragma pop_macro("slots")
 
 #include "PyCall.h"
-
 enum  PyRunnerError //TODO move this into an nrcpptypes.h and include it in the wrapper
 {
     PyRunnerError_OK = 0,//no error
@@ -37,11 +36,11 @@ enum  PyRunnerError //TODO move this into an nrcpptypes.h and include it in the 
 class PyRunner : public QObject
 {
     Q_OBJECT
-
     QStringList m_dependencies;
     QString m_sourceFilePy;
     QString m_scriptFileName;
     QString m_scriptFilePath;
+    QString m_runnerId;
     QThread * m_pPythonThread;
     void processCall(PyFunctionCall * call);
 
@@ -56,11 +55,10 @@ class PyRunner : public QObject
     void unloadCurrentModule();
     PyObject * getModuleDict();
     PyObject * m_module_dict;
+
     int m_defaultModulesCount;
     int m_defaultModulePathsCount;
     QStringList m_defaultLoadedModules;
-
-
     void setup();
 
     /* Function context call */
@@ -93,7 +91,15 @@ public:
     PyFunctionCallResult getAsyncCallResult(QString id);
     QString getCallInfo(QString id);
     QStringList getAsyncCallsList();
+    QString runnerId() const;
+    void sendMessage(QString msg);
     //END_WRAPPER_METHODS
+
+signals:
+    //START_SIGNAL_METHODS
+    void messageReceived(QString message);
+    void callCompletedSignal(QString);
+    //END_SIGNAL_METHODS
 
 private:
     void handleCompletedCall(PyFunctionCall * call);
@@ -101,9 +107,6 @@ private:
 signals:
     void tearDownSignal(); //FIXME - WTF? this is never emitted (2022-02-01 FL)
     void startCallRequestedSignal(PyFunctionCall * call);
-    //START_SIGNAL_METHODS
-    void callCompletedSignal(QString);
-    //END_SIGNAL_METHODS
 
 private slots:
     void loadStuff();
@@ -111,6 +114,6 @@ private slots:
     void onStartCallRequest(PyFunctionCall * call);
 };
 
-//Q_DECLARE_METATYPE(PyRunner)
+Q_DECLARE_METATYPE(PyRunner)
 
 #endif // PYRUNNER_H
