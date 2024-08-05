@@ -839,6 +839,12 @@ void PyRunner::loadStuff()
     loadCurrentModule();
 }
 
+/*!
+ * \brief PyRunner::sendMessage is a message sent by the python side, the responsible class to catch the message is PyCallback
+ * \param msg a string message, can be a json or whatever, this is just a channell actual syntax must be discussed between the involved parts
+ * \note in order to work the Pytohn side must know the pyrunnerid, see the class PyCallback for more info
+ */
+
 void PyRunner::sendMessage(QString msg)
 {
     //qDebug()<<"received message"<<msg;
