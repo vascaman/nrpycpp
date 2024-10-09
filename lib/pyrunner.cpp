@@ -390,7 +390,7 @@ PyObject * PyRunner::getModuleDict()
         PyObject * scriptName = PyUnicode_FromString(qPrintable(m_scriptFileName)); //new reference
 
         //script meta data
-        PyObject * m_py_lib_mod = PyImport_ImportModule("PyCallbacks_test"); //new reference
+        PyObject * m_py_lib_mod = PyImport_Import(scriptName); //new reference
 
         if(!m_py_lib_mod)
         {
