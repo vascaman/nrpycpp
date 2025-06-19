@@ -119,6 +119,10 @@ def get_absolute_path(path):
 	current_path = os.path.dirname(os.path.realpath(__file__))
 	absolute_path = os.path.join(current_path, path)
 	absolute_path = os.path.abspath(absolute_path)
+	
+	if not os.path.exists(absolute_path):
+		absolute_path = "! - - PATH NOT FOUND - - ! : "+absolute_path
+
 	return absolute_path
 
 def get_lib_name():
