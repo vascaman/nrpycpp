@@ -70,7 +70,7 @@ DISTFILES += \
 # includes to be packaged
 DIST_INCS += \
 $$PWD/PyCall.h \
-$$PWD/PyCallBackIface.h
+$$PWD/PyCallBackIface.h \
 $$PWD/PyRunnerQt.h
 
 CONFIG(debug, debug|release) {
