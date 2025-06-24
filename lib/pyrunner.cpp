@@ -413,7 +413,7 @@ sys.stdout = sys.stderr = _RealtimeCapture()
 
 #ifdef QT_DEBUG
     redirectClass.replace("[LIBRARY_PLACE_HOLDER]", "libnrPyCpp_d.so.1");
-#elif
+#else
     redirectClass.replace("[LIBRARY_PLACE_HOLDER]", "libnrPyCpp.so.1");
 #endif
 
