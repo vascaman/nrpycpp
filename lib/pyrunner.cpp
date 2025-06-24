@@ -394,7 +394,7 @@ class _RealtimeCapture:
 
     def __init__(self):
         self.runnerId = "[RUNNER_ID]"
-        self.lib = ctypes.CDLL(None)
+        self.lib = ctypes.CDLL("[LIBRARY_PLACE_HOLDER]")
         self._nrpycpp_write_callback = self.lib._nrpycpp_write_callback
         self._nrpycpp_write_callback.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
         self._nrpycpp_write_callback.restype = None
@@ -410,6 +410,13 @@ class _RealtimeCapture:
 
 sys.stdout = sys.stderr = _RealtimeCapture()
 )";
+
+#ifdef QT_DEBUG
+    redirectClass.replace("[LIBRARY_PLACE_HOLDER]", "libnrPyCpp_d.so.1");
+#elif
+    redirectClass.replace("[LIBRARY_PLACE_HOLDER]", "libnrPyCpp.so.1");
+#endif
+
     redirectClass.replace("[RUNNER_ID]", m_runnerId);
     //qDebug()<<qPrintable(redirectClass);
     PyRun_SimpleString(qPrintable(redirectClass));
