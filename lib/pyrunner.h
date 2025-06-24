@@ -19,6 +19,7 @@
 #include <QFile>
 #include <QDir>
 #include <QTimer>
+#include <PyCallBackIface.h>
 
 #pragma push_macro("slots")
 #undef slots
@@ -51,6 +52,10 @@ class PyRunner : public QObject
     void untrackCall(PyFunctionCall * call);
     bool checkCall(QUuid callID);
 
+    PyCallBackIface * m_pCallbackHandler;
+    void loadRedirectOutput();
+    QByteArray * m_pStdOutputCallBackBuffer = nullptr;
+
     void loadCurrentModule();
     void unloadCurrentModule();
     PyObject * getModuleDict();
@@ -79,7 +84,9 @@ class PyRunner : public QObject
 public:
     PyRunner(QString scriptPath, QStringList dependencies=QStringList());
     ~PyRunner();
-
+    void onStdOutputWriteCallBack(const char* s);
+    void onStdOutputFlushCallback();
+    void setCallbackHandler(PyCallBackIface * i_callbackHandler){m_pCallbackHandler = i_callbackHandler;};
     //START_WRAPPER_METHODS
 
     //utils
@@ -98,7 +105,7 @@ public:
 signals:
     //START_SIGNAL_METHODS
     void messageReceived(QString message);
-    void callCompletedSignal(QString);
+    void callCompletedSignal(QString callId);
     //END_SIGNAL_METHODS
 
 private:

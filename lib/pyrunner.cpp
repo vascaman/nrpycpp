@@ -30,6 +30,7 @@ PyRunner::~PyRunner()
     */
 
 //    delete m_pPythonThread;
+    m_pCallbackHandler = nullptr;
 
     m_pPythonThread->exit();
     m_pPythonThread->wait();
@@ -45,6 +46,7 @@ PyRunner::~PyRunner()
         delete call;
     }
     PyEnvironment::getInstance().untrackRunner(m_runnerId);
+    delete m_pStdOutputCallBackBuffer;
     qDebug() << "PyRunner dtor done";
 }
 
@@ -52,10 +54,12 @@ PyRunner::~PyRunner()
 PyRunner::PyRunner(QString scriptPath, QStringList dependecies)
 {
     PRINT_THREAD_INFO
+    m_pStdOutputCallBackBuffer = new QByteArray();
     m_syntaxError = false;
     m_sourceFilePy = scriptPath;
     m_dependencies = dependecies;
     m_module_dict = NULL;
+    m_pCallbackHandler = nullptr;
 
     qRegisterMetaType<PyFunctionCall>("PyFunctionCall");
     qRegisterMetaType<PyRunner>("PyRunner");
@@ -380,6 +384,53 @@ bool PyRunner::checkCall(QUuid callID)
     return true;
 }
 
+void PyRunner::loadRedirectOutput()
+{
+    QString redirectClass = R"(
+import sys
+import ctypes
+
+class _RealtimeCapture:
+
+    def __init__(self):
+        self.runnerId = "[RUNNER_ID]"
+        self.lib = ctypes.CDLL(None)
+        self._nrpycpp_write_callback = self.lib._nrpycpp_write_callback
+        self._nrpycpp_write_callback.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        self._nrpycpp_write_callback.restype = None
+
+        self._nrpycpp_flush_callback = self.lib._nrpycpp_flush_callback
+        self._nrpycpp_flush_callback.argtypes = [ctypes.c_char_p]
+        self._nrpycpp_flush_callback.restype = None
+    def write(self, s):
+        self._nrpycpp_write_callback(s.encode('utf-8'), self.runnerId.encode('utf-8'))
+    def flush(self):
+        self._nrpycpp_flush_callback(self.runnerId.encode('utf-8'))
+
+
+sys.stdout = sys.stderr = _RealtimeCapture()
+)";
+    redirectClass.replace("[RUNNER_ID]", m_runnerId);
+    //qDebug()<<qPrintable(redirectClass);
+    PyRun_SimpleString(qPrintable(redirectClass));
+}
+
+void PyRunner::onStdOutputWriteCallBack(const char *s)
+{
+    m_pStdOutputCallBackBuffer->append(s);
+}
+
+void PyRunner::onStdOutputFlushCallback()
+{
+    QString log = QString::fromUtf8(*m_pStdOutputCallBackBuffer);
+    //qDebug()<<m_pStdOutputCallBackBuffer->toStdString();
+    if (m_pCallbackHandler)
+    {
+        m_pCallbackHandler->onStdOutput(log);
+    }
+    m_pStdOutputCallBackBuffer->clear();
+}
+
 
 PyObject * PyRunner::getModuleDict()
 {
@@ -645,6 +696,7 @@ void PyRunner::loadCurrentModule()
     // Py_Initialize();
     // m_pPyThreadState = PyEval_SaveThread();
     PyGILState_STATE gstate = openCallContext();
+    loadRedirectOutput();
     PyObject* sys = PyImport_ImportModule( "sys" ); //new reference
     PyObject* sys_path = PyObject_GetAttrString( sys, "path" ); //new reference
     PyObject* folder_path = PyUnicode_FromString( qPrintable(m_scriptFilePath) ); //new reference

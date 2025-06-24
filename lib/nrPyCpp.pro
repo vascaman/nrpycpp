@@ -55,6 +55,7 @@ message("nrPyCpp LIBS = $${LIBS}")
 
 HEADERS += \
     PyCall.h \
+    PyCallBackIface.h \
     PyCallback.h \
     pyenvironment.h \
     pyrunner.h \
@@ -69,6 +70,7 @@ DISTFILES += \
 # includes to be packaged
 DIST_INCS += \
 $$PWD/PyCall.h \
+$$PWD/PyCallBackIface.h
 $$PWD/PyRunnerQt.h
 
 CONFIG(debug, debug|release) {

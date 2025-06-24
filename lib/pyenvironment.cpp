@@ -2,6 +2,14 @@
 
 #include <QMutexLocker>
 
+extern "C" void _nrpycpp_write_callback(const char* s, const char* runner_id) {
+    PyEnvironment::getInstance().onStdOutputWriteCallBack(s, runner_id);
+}
+
+extern "C" void _nrpycpp_flush_callback(const char* runner_id) {
+    PyEnvironment::getInstance().onStdOutputFlushCallback(runner_id);
+}
+
 PyEnvironment::~PyEnvironment()
 {
     qDebug() << "PyEnvironment dtor";
@@ -13,6 +21,23 @@ PyRunner* PyEnvironment::getRunner(QString runnerId)
     PyRunner * runner = m_runners.value(runnerId);
     m_runnersLock.unlock();
     return runner;
+}
+
+void PyEnvironment::onStdOutputWriteCallBack(const char *s, QString runner_id)
+{
+    PyRunner * runner = getRunner(runner_id);
+    if (runner == nullptr)
+        return;
+    runner->onStdOutputWriteCallBack(s);
+
+}
+
+void PyEnvironment::onStdOutputFlushCallback(QString runner_id)
+{
+    PyRunner * runner = getRunner(runner_id);
+    if (runner == nullptr)
+        return;
+    runner->onStdOutputFlushCallback();
 }
 
 void PyEnvironment::trackRunner(QString runnerId, PyRunner *runner)
@@ -45,7 +70,6 @@ PyEnvironment::PyEnvironment()
     m_skipFinalize = false;
     m_initialized = false;
 }
-
 
 PyEnvironment &PyEnvironment::getInstance()
 {

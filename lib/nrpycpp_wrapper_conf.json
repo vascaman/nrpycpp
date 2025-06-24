@@ -14,7 +14,8 @@
       "header_class_start": [
         "\n#ifndef PYRUNNER_QT_INCS",
         "#define PYRUNNER_QT_INCS",
-        "\n#include \"PyCall.h\"",
+        "#include <PyCall.h>",
+        "#include <PyCallBackIface.h>",
         "#include <QStringList>",
         "#include <QVariantList>",
         "#include <QObject>",
@@ -38,6 +39,7 @@
         "    PyRunnerQt(QString pythonscript, QStringList dependencies);",
         "    ~PyRunnerQt();",
         "    QString getRunnerId();",
+        "    void setCallbackHandler(PyCallBackIface * i_pCallbackHandler);",
         "    static void setSkipFinalize(bool skipFinalize);",
         "    static bool getSkipFinalize();\n\n"
       ],
@@ -62,6 +64,7 @@
         "\n}\n",
         "PyRunnerQt::~PyRunnerQt()",
         "{",
+        "    m_pPyRunner->setCallbackHandler(nullptr);",
         "    delete m_pPyRunner;",
         "    PyEnvironment::getInstance().stop(); //FIXME we should add runner usages",
         "}\n\n",
@@ -88,6 +91,14 @@
        "bool PyRunnerQt::getSkipFinalize()",
        "{",
        "    return PyEnvironment::getInstance().getSkipFinalize();",
+       "}\n\n",
+       "/*!",
+       " * \\brief PyRunner::setCallbackHandler(PyCallBackIface *i_pCallbackHandler)",
+       " * \\param i_pCallbackHandler sets the object that implement the class PyCallBackIface in order to get callbacks",
+       " */",
+       "void PyRunnerQt::setCallbackHandler(PyCallBackIface *i_pCallbackHandler)",
+       "{",
+       "    m_pPyRunner->setCallbackHandler(i_pCallbackHandler);",
        "}\n\n"
       ],
       "impl_class_stop": []
