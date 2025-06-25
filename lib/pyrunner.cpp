@@ -429,13 +429,16 @@ void PyRunner::onStdOutputWriteCallBack(const char *s)
 
 void PyRunner::onStdOutputFlushCallback()
 {
-    QString log = QString::fromUtf8(*m_pStdOutputCallBackBuffer);
+    // const QString * log = new QString(*m_pStdOutputCallBackBuffer);
+
+    const QSharedPointer<QString> log =  QSharedPointer<QString>(new QString(*m_pStdOutputCallBackBuffer));
     //qDebug()<<m_pStdOutputCallBackBuffer->toStdString();
     if (m_pCallbackHandler)
     {
         m_pCallbackHandler->onStdOutput(log);
     }
     m_pStdOutputCallBackBuffer->clear();
+
 }
 
 
