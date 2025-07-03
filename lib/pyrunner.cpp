@@ -388,6 +388,7 @@ void PyRunner::loadRedirectOutput()
 {
     QString redirectClass = R"(
 import sys
+import threading
 import ctypes
 
 class _RealtimeCapture:
@@ -402,11 +403,27 @@ class _RealtimeCapture:
         self._nrpycpp_flush_callback = self.lib._nrpycpp_flush_callback
         self._nrpycpp_flush_callback.argtypes = [ctypes.c_char_p]
         self._nrpycpp_flush_callback.restype = None
+
+        self._nrpycpp_exception_callback = self.lib._nrpycpp_exception_callback
+        self._nrpycpp_exception_callback.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        self._nrpycpp_exception_callback.restype = None
+
+        sys.excepthook = self.handle_exception
+        threading.excepthook = self.handle_thread_exception
+
     def write(self, s):
         self._nrpycpp_write_callback(s.encode('utf-8'), self.runnerId.encode('utf-8'))
+
     def flush(self):
         self._nrpycpp_flush_callback(self.runnerId.encode('utf-8'))
 
+    def handle_exception(self, exc_type, exc_value, exc_traceback):
+        message = f"{exc_type.__name__}: {exc_value}"
+        self._nrpycpp_exception_callback(message.encode('utf-8'), self.runnerId.encode('utf-8'))
+
+    def handle_thread_exception(self, args):
+        message = f"[Thread {args.thread.name}] {args.exc_type.__name__}: {args.exc_value}"
+        self._nrpycpp_exception_callback(message.encode('utf-8'), self.runnerId.encode('utf-8'))
 
 sys.stdout = sys.stderr = _RealtimeCapture()
 )";
@@ -439,6 +456,16 @@ void PyRunner::onStdOutputFlushCallback()
     }
     m_pStdOutputCallBackBuffer->clear();
 
+}
+
+void PyRunner::onExceptionCallback(const char *exceptionMsg)
+{
+    const QSharedPointer<QString> log =  QSharedPointer<QString>(new QString(QString::fromUtf8(exceptionMsg)));
+    if (m_pCallbackHandler)
+    {
+        m_pCallbackHandler->onExceptionCallback(log);
+    }
+    m_syntaxError = true;
 }
 
 

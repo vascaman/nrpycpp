@@ -55,7 +55,6 @@ class PyRunner : public QObject
     PyCallBackIface * m_pCallbackHandler;
     void loadRedirectOutput();
     QByteArray * m_pStdOutputCallBackBuffer = nullptr;
-
     void loadCurrentModule();
     void unloadCurrentModule();
     PyObject * getModuleDict();
@@ -80,12 +79,14 @@ class PyRunner : public QObject
 
     //errors
     bool m_syntaxError;
+    QString m_pythonSyntaxErrorMsg;
 
 public:
     PyRunner(QString scriptPath, QStringList dependencies=QStringList());
     ~PyRunner();
     void onStdOutputWriteCallBack(const char* s);
     void onStdOutputFlushCallback();
+    void onExceptionCallback(const char* s);
     void setCallbackHandler(PyCallBackIface * i_callbackHandler){m_pCallbackHandler = i_callbackHandler;};
     //START_WRAPPER_METHODS
 
