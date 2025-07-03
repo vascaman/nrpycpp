@@ -463,7 +463,7 @@ void PyRunner::onExceptionCallback(const char *exceptionMsg)
     const QSharedPointer<QString> log =  QSharedPointer<QString>(new QString(QString::fromUtf8(exceptionMsg)));
     if (m_pCallbackHandler)
     {
-        m_pCallbackHandler->onExceptionCallback(log);
+        m_pCallbackHandler->onException(log);
     }
     m_syntaxError = true;
 }
