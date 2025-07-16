@@ -44,6 +44,7 @@ public:
     void onStdOutputWriteCallBack(const char* s, QString runner_id);
     void onStdOutputFlushCallback(QString runner_id);
     void onExceptionCallback(const char *msg, QString runner_id);
+    void onSendMessage(const char *msg, QString runner_id);
 };
 
 #endif // PYENVIRONMENT_H

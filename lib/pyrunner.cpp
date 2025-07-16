@@ -391,10 +391,20 @@ import sys
 import threading
 import ctypes
 
-class _RealtimeCapture:
+class NrPyCpp:
+    @staticmethod
+    def runnerId():
+        return "[RUNNER_ID]"
+
+    @staticmethod
+    def send_message(message):
+        callbackHandler = _NrPyCpp()
+        callbackHandler.send_message(message)
+
+class _NrPyCpp:
 
     def __init__(self):
-        self.runnerId = "[RUNNER_ID]"
+        self.runnerId = NrPyCpp.runnerId()
         self.lib = ctypes.CDLL("[LIBRARY_PLACE_HOLDER]")
         self._nrpycpp_write_callback = self.lib._nrpycpp_write_callback
         self._nrpycpp_write_callback.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
@@ -408,6 +418,10 @@ class _RealtimeCapture:
         self._nrpycpp_exception_callback.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
         self._nrpycpp_exception_callback.restype = None
 
+        self._nrpycpp_send_message_callback = self.lib._nrpycpp_send_message_callback
+        self._nrpycpp_send_message_callback.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        self._nrpycpp_send_message_callback.restype = None
+
         sys.excepthook = self.handle_exception
         threading.excepthook = self.handle_thread_exception
 
@@ -417,6 +431,9 @@ class _RealtimeCapture:
     def flush(self):
         self._nrpycpp_flush_callback(self.runnerId.encode('utf-8'))
 
+    def send_message(self, message):
+        self._nrpycpp_send_message_callback(message.encode('utf-8'), self.runnerId.encode('utf-8'))
+
     def handle_exception(self, exc_type, exc_value, exc_traceback):
         message = f"{exc_type.__name__}: {exc_value}"
         self._nrpycpp_exception_callback(message.encode('utf-8'), self.runnerId.encode('utf-8'))
@@ -425,7 +442,7 @@ class _RealtimeCapture:
         message = f"[Thread {args.thread.name}] {args.exc_type.__name__}: {args.exc_value}"
         self._nrpycpp_exception_callback(message.encode('utf-8'), self.runnerId.encode('utf-8'))
 
-sys.stdout = sys.stderr = _RealtimeCapture()
+sys.stdout = sys.stderr = _NrPyCpp()
 )";
 
 #ifdef QT_DEBUG
@@ -436,7 +453,19 @@ sys.stdout = sys.stderr = _RealtimeCapture()
 
     redirectClass.replace("[RUNNER_ID]", m_runnerId);
     //qDebug()<<qPrintable(redirectClass);
-    PyRun_SimpleString(qPrintable(redirectClass));
+    PyObject* result = PyRun_String(
+        qPrintable(redirectClass),
+        Py_file_input,
+        static_cast<PyObject*>(m_module_dict),  // globals
+        static_cast<PyObject*>(m_module_dict)   // locals (usa lo stesso dizionario)
+        );
+
+    if (!result) {
+        PyErr_Print();
+        qDebug() << "Errore nell'esecuzione del codice Python.\n";
+    } else {
+        Py_DECREF(result);  // Pulizia
+    }
 }
 
 void PyRunner::onStdOutputWriteCallBack(const char *s)
@@ -468,6 +497,14 @@ void PyRunner::onExceptionCallback(const char *exceptionMsg)
     m_syntaxError = true;
 }
 
+void PyRunner::onSendMessage(const char *s)
+{
+    const QSharedPointer<QString> msg =  QSharedPointer<QString>(new QString(QString::fromUtf8(s)));
+    if (m_pCallbackHandler)
+    {
+        m_pCallbackHandler->onSendMessage(msg);
+    }
+}
 
 PyObject * PyRunner::getModuleDict()
 {
@@ -501,12 +538,11 @@ PyObject * PyRunner::getModuleDict()
             return NULL;
         }
 //        printPyDict(m_module_dict);
+
+        loadRedirectOutput();
+
         Py_DecRef(m_py_lib_mod);
         Py_DecRef(scriptName);
-
-        //sets pyrunnerId
-        // QString setPyRunnerIdCmd = "__pyrunnerId = \""+m_runnerId+"\"";
-        // PyRun_SimpleString(qPrintable(setPyRunnerIdCmd));
     }
 
     return  m_module_dict;
@@ -733,7 +769,7 @@ void PyRunner::loadCurrentModule()
     // Py_Initialize();
     // m_pPyThreadState = PyEval_SaveThread();
     PyGILState_STATE gstate = openCallContext();
-    loadRedirectOutput();
+    //loadRedirectOutput();
     PyObject* sys = PyImport_ImportModule( "sys" ); //new reference
     PyObject* sys_path = PyObject_GetAttrString( sys, "path" ); //new reference
     PyObject* folder_path = PyUnicode_FromString( qPrintable(m_scriptFilePath) ); //new reference

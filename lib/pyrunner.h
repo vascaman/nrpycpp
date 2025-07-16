@@ -87,6 +87,7 @@ public:
     void onStdOutputWriteCallBack(const char* s);
     void onStdOutputFlushCallback();
     void onExceptionCallback(const char* s);
+    void onSendMessage(const char* s);
     void setCallbackHandler(PyCallBackIface * i_callbackHandler){m_pCallbackHandler = i_callbackHandler;};
     //START_WRAPPER_METHODS
 

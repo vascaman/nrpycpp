@@ -12,6 +12,11 @@ extern "C" void _nrpycpp_flush_callback(const char* runner_id) {
 extern "C" void _nrpycpp_exception_callback(const char* s, const char* runner_id) {
     PyEnvironment::getInstance().onExceptionCallback(s, runner_id);
 }
+
+extern "C" void _nrpycpp_send_message_callback(const char* message,const char* runner_id) {
+    PyEnvironment::getInstance().onSendMessage(message, runner_id);
+}
+
 PyEnvironment::~PyEnvironment()
 {
     qDebug() << "PyEnvironment dtor";
@@ -50,7 +55,15 @@ void PyEnvironment::onExceptionCallback(const char *msg, QString runner_id)
     runner->onExceptionCallback(msg);
 }
 
-void PyEnvironment::trackRunner(QString runnerId, PyRunner *runner)
+void PyEnvironment::onSendMessage(const char *msg, QString  runner_id)
+{
+    PyRunner * runner = getRunner(runner_id);
+    if (runner == nullptr)
+        return;
+    runner->onSendMessage(msg);
+}
+
+void PyEnvironment::trackRunner(QString  runnerId, PyRunner *runner)
 {
     m_runnersLock.lock();
     m_runners.insert(runnerId, runner);

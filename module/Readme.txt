@@ -21,6 +21,7 @@ BUILD
 		$ cd build
 		
 		export Qt6_DIR=/home/netresults.wintranet/aru/Qt/6.5.0/gcc_64/lib/cmake/
+		export LD_LIBRARY_PATH=/Qt/6.5.3/gcc_64/lib
 		
 		launch cmake
 		$ cmake -H.. -B. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
