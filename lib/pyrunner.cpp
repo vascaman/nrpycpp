@@ -390,6 +390,9 @@ void PyRunner::loadRedirectOutput()
 import sys
 import threading
 import ctypes
+import logging
+from io import StringIO
+from typing import List, Optional
 
 class NrPyCpp:
     @staticmethod
@@ -442,7 +445,147 @@ class _NrPyCpp:
         message = f"[Thread {args.thread.name}] {args.exc_type.__name__}: {args.exc_value}"
         self._nrpycpp_exception_callback(message.encode('utf-8'), self.runnerId.encode('utf-8'))
 
-sys.stdout = sys.stderr = _NrPyCpp()
+
+class _InterceptedStream:
+    """
+    Wrapper per sys.stdout/sys.stderr.
+    Tutto ciò che viene scritto qui viene intercettato e inoltrato a ConsoleInterceptor.
+    """
+    def __init__(self, name: str, original_stream, interceptor):
+        self.name = name
+        self._original = original_stream
+        self._interceptor = interceptor
+
+    def write(self, text):
+        if not text:
+            return
+        # registra la stampa nel buffer dell'interceptor
+        self._interceptor._capture_print(self.name, text)
+        # inoltra al flusso originale se richiesto
+        if self._interceptor.forward_prints:
+            self._original.write(text)
+
+    def flush(self):
+        try:
+            self._original.flush()
+        except Exception:
+            pass
+
+    def __getattr__(self, item):
+        # delega altri attributi (es. encoding, fileno, ecc.)
+        return getattr(self._original, item)
+
+
+class ConsoleInterceptor(logging.Handler):
+    _instance_lock = threading.Lock()
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        with cls._instance_lock:
+            if cls._instance is not None:
+                raise RuntimeError("ConsoleInterceptor è già stato istanziato.")
+            instance = super().__new__(cls)
+            cls._instance = instance
+            return instance
+
+    def __init__(self, forward_to_original: bool = True, forward_prints: bool = False, fmt: Optional[str] = None):
+        """
+        forward_to_original: True -> inoltra anche i log logging agli handler originali
+        forward_prints: True -> inoltra le print() alla console originale
+        fmt: formato messaggi logging
+        """
+        super().__init__(level=logging.NOTSET)
+        self._lock = threading.RLock()
+        self.forward_logs = forward_to_original
+        self.forward_prints = forward_prints
+
+        self._root = logging.getLogger()
+        self._original_stdout = sys.stdout
+        self._original_stderr = sys.stderr
+        self._original_handlers = []
+        self._stopped = False
+
+        if fmt:
+            self.setFormatter(logging.Formatter(fmt))
+
+        self._replace_logging_handlers()
+        self._replace_print_streams()
+
+        # Imposta root logger per non perdere messaggi
+        if self._root.level != logging.NOTSET:
+            self._root.setLevel(logging.NOTSET)
+
+        if self not in self._root.handlers:
+            self._root.addHandler(self)
+
+    # --- gestione logging ---
+    def _replace_logging_handlers(self):
+        with self._lock:
+            new_handlers = []
+            for h in self._root.handlers:
+                if isinstance(h, logging.StreamHandler) and getattr(h, "stream", None) in (sys.stdout, sys.stderr):
+                    self._original_handlers.append(h)
+                else:
+                    new_handlers.append(h)
+            self._root.handlers = new_handlers
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            with self._lock:
+
+                msg = self.format(record)
+                callbackHandler = _NrPyCpp()
+                callbackHandler.write(msg)
+
+
+                if self.forward_logs:
+                    for orig in self._original_handlers:
+                        try:
+                            stream = getattr(orig, "stream", None)
+                            if stream:
+                                stream.write(msg + "\n")
+                                stream.flush()
+                        except Exception:
+                            continue
+        except Exception:
+            self.handleError(record)
+
+    # --- gestione print() ---
+    def _replace_print_streams(self):
+        sys.stdout = _InterceptedStream("stdout", sys.stdout, self)
+        sys.stderr = _InterceptedStream("stderr", sys.stderr, self)
+
+    def _capture_print(self, stream_name: str, text: str):
+        with self._lock:
+            # puoi anche aggiungere tag tipo "[STDOUT]" o "[STDERR]"
+
+            callbackHandler = _NrPyCpp()
+            callbackHandler.write(text)
+
+    def stop(self):
+        """Ripristina sys.stdout/stderr e gli handler logging originali."""
+        with self._lock:
+            if self._stopped:
+                return
+
+            # ripristina i flussi originali
+            sys.stdout = self._original_stdout
+            sys.stderr = self._original_stderr
+
+            # ripristina gli handler logging
+            for h in self._original_handlers:
+                if h not in self._root.handlers:
+                    self._root.addHandler(h)
+
+            try:
+                self._root.removeHandler(self)
+            except Exception:
+                pass
+
+            self._stopped = True
+
+
+__interceptor = ConsoleInterceptor(fmt="%(levelname)s: %(message)s")
 )";
 
 #ifdef QT_DEBUG

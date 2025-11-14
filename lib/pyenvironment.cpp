@@ -4,6 +4,7 @@
 
 extern "C" void _nrpycpp_write_callback(const char* s, const char* runner_id) {
     PyEnvironment::getInstance().onStdOutputWriteCallBack(s, runner_id);
+    PyEnvironment::getInstance().onStdOutputFlushCallback(runner_id);
 }
 
 extern "C" void _nrpycpp_flush_callback(const char* runner_id) {
