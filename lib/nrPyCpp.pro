@@ -1,5 +1,5 @@
 
-NRPYCPP_VERSION = 1.0.2
+NRPYCPP_VERSION = 1.0.7
 
 #DO NOT CHANGE ANYTHING BELOW THIS LINE UNLESS YOU ARE A MAINTAINER
 
@@ -10,6 +10,8 @@ NRPYCPP_VERSION = 1.0.2
 QT -= gui
 CONFIG += c++11 debug_and_release
 CONFIG -= app_bundle
+
+VERSION = $${NRPYCPP_VERSION}
 
 TEMPLATE = lib
 win32 {
@@ -41,6 +43,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         pyenvironment.cpp \
         pyrunner.cpp \
+        PyCallback.cpp \
         PyRunnerQt.cpp
 
 
@@ -52,6 +55,8 @@ message("nrPyCpp LIBS = $${LIBS}")
 
 HEADERS += \
     PyCall.h \
+    PyCallBackIface.h \
+    PyCallback.h \
     pyenvironment.h \
     pyrunner.h \
     PyRunnerQt.h \
@@ -65,6 +70,7 @@ DISTFILES += \
 # includes to be packaged
 DIST_INCS += \
 $$PWD/PyCall.h \
+$$PWD/PyCallBackIface.h \
 $$PWD/PyRunnerQt.h
 
 CONFIG(debug, debug|release) {

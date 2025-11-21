@@ -1,0 +1,12 @@
+{
+  "pythonFileName": "/home/netresults.wintranet/aru/Projects/nrpycpp_master/module/PyCallbacks_test.py",
+  "pythonSearchPaths": 
+    [ 
+        ".", 
+        "/home/netresults.wintranet/aru/Projects/nrpycpp_master/module/build", 
+        "/home/netresults.wintranet/aru/Projects/nrpycpp_master/module/deps/Pyside/linux64_Ubuntu_20.04/PySide-qt6.5-python3.10/package_for_wheels" 
+    ],
+  "testDurationSec": 5,
+  "inputParams": {},
+  "outputMetrics": []
+}

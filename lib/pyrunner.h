@@ -19,6 +19,7 @@
 #include <QFile>
 #include <QDir>
 #include <QTimer>
+#include <PyCallBackIface.h>
 
 #pragma push_macro("slots")
 #undef slots
@@ -26,7 +27,6 @@
 #pragma pop_macro("slots")
 
 #include "PyCall.h"
-
 enum  PyRunnerError //TODO move this into an nrcpptypes.h and include it in the wrapper
 {
     PyRunnerError_OK = 0,//no error
@@ -37,26 +37,32 @@ enum  PyRunnerError //TODO move this into an nrcpptypes.h and include it in the 
 class PyRunner : public QObject
 {
     Q_OBJECT
-
     QStringList m_dependencies;
     QString m_sourceFilePy;
     QString m_scriptFileName;
     QString m_scriptFilePath;
+    QString m_runnerId;
     QThread * m_pPythonThread;
-    void processCall(PyFunctionCall call);
+    void processCall(PyFunctionCall * call);
 
-    QHash<QUuid, PyFunctionCall> m_calls;
+    QHash<QUuid, PyFunctionCall*> m_calls;
     QMutex m_callsMutex;
-    void trackCall(PyFunctionCall call);
-    PyFunctionCall getCall(QUuid callID);
-    void untrackCall(PyFunctionCall call);
+    void trackCall(PyFunctionCall * call);
+    PyFunctionCall * getCall(QUuid callID);
+    void untrackCall(PyFunctionCall * call);
     bool checkCall(QUuid callID);
 
+    PyCallBackIface * m_pCallbackHandler;
+    void loadRedirectOutput();
+    QByteArray * m_pStdOutputCallBackBuffer = nullptr;
     void loadCurrentModule();
     void unloadCurrentModule();
     PyObject * getModuleDict();
     PyObject * m_module_dict;
 
+    int m_defaultModulesCount;
+    int m_defaultModulePathsCount;
+    QStringList m_defaultLoadedModules;
     void setup();
 
     /* Function context call */
@@ -73,11 +79,16 @@ class PyRunner : public QObject
 
     //errors
     bool m_syntaxError;
+    QString m_pythonSyntaxErrorMsg;
 
 public:
     PyRunner(QString scriptPath, QStringList dependencies=QStringList());
     ~PyRunner();
-
+    void onStdOutputWriteCallBack(const char* s);
+    void onStdOutputFlushCallback();
+    void onExceptionCallback(const char* s);
+    void onSendMessage(const char* s);
+    void setCallbackHandler(PyCallBackIface * i_callbackHandler){m_pCallbackHandler = i_callbackHandler;};
     //START_WRAPPER_METHODS
 
     //utils
@@ -89,21 +100,29 @@ public:
     PyFunctionCallResult getAsyncCallResult(QString id);
     QString getCallInfo(QString id);
     QStringList getAsyncCallsList();
+    QString runnerId() const;
+    void sendMessage(QString msg);
     //END_WRAPPER_METHODS
 
+signals:
+    //START_SIGNAL_METHODS
+    void messageReceived(QString message);
+    void callCompletedSignal(QString callId);
+    //END_SIGNAL_METHODS
+
 private:
-    void handleCompletedCall(PyFunctionCall call);
+    void handleCompletedCall(PyFunctionCall * call);
 
 signals:
     void tearDownSignal(); //FIXME - WTF? this is never emitted (2022-02-01 FL)
-    void startCallRequestedSignal(PyFunctionCall call);
-    //START_SIGNAL_METHODS
-    void callCompletedSignal(QString);
-    //END_SIGNAL_METHODS
+    void startCallRequestedSignal(PyFunctionCall * call);
 
 private slots:
+    void loadStuff();
     void tearDown();
-    void onStartCallRequest(PyFunctionCall call);
+    void onStartCallRequest(PyFunctionCall * call);
 };
+
+Q_DECLARE_METATYPE(PyRunner)
 
 #endif // PYRUNNER_H

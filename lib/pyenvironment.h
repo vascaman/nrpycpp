@@ -22,22 +22,29 @@ class PyEnvironment
     int m_connectedRunners = 0;
     PyThreadState *m_pPyThreadState = nullptr;
 
-private:
     PyEnvironment();
     PyEnvironment(PyEnvironment const& copy);
     PyEnvironment & operator = (PyEnvironment const&copy);
-    //QMap<QString, PyRunner*> m_modules;
-
+    QMutex m_runnersLock;
+    QMap<QString, PyRunner*> m_runners;
 public:
     static PyEnvironment &getInstance();
     bool start();
     bool stop();
     ~PyEnvironment();
+    void trackRunner(QString runnerId, PyRunner* runner);
+    void untrackRunner(QString runnerId);
+    PyRunner *getRunner(QString runnerId);
 
     //PyRunner * getInstanceModule(QString modulePath, QStringList dependecies = QStringList());
     //void unloadModule(PyRunner* runner);
     bool getSkipFinalize() const;
     void setSkipFinalize(bool skipFinalize);
+
+    void onStdOutputWriteCallBack(const char* s, QString runner_id);
+    void onStdOutputFlushCallback(QString runner_id);
+    void onExceptionCallback(const char *msg, QString runner_id);
+    void onSendMessage(const char *msg, QString runner_id);
 };
 
 #endif // PYENVIRONMENT_H
