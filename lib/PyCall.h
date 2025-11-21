@@ -5,6 +5,7 @@
 #include <QUuid>
 #include <QVariantList>
 #include <QMutex>
+#include <QDebug>
 
 struct PyFunctionCallResult
 {
@@ -33,6 +34,7 @@ public:
     {
 //        m_syncCallLock = QMutex();
         m_CallID = QUuid::createUuid();
+        qDebug() << "Created call with id: " << m_CallID.toString() << " for function: " << i_pyFunctionToCall;
     }
     PyFunctionCall(const PyFunctionCall &rhs){
         m_functionName = rhs.functionName();
